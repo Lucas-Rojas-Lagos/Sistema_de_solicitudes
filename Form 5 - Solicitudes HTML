@@ -1,0 +1,399 @@
+<script src="https://cdn.tiny.cloud/1/efvzznjo8nycux9l1nmffhhvyyb2k8ai5w7vlxjtzjahv9cr/tinymce/7/tinymce.min.js"
+  referrerpolicy="origin"></script>
+<link href="https://cdnjs.cloudflare.com/ajax/libs/select2/4.0.13/css/select2.min.css" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/select2/4.0.13/js/select2.min.js"></script>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/flatpickr/4.6.13/flatpickr.min.css">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/flatpickr/4.6.13/flatpickr.min.js"></script>
+
+<script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+
+<div id="SE51679706" class="container-fluid" edrag="01" elecod="PC_01" style="margin-top:-15px;">
+  <div id="row-top-1" class="row" edrag="01" elecod="PC_03" style="">
+    <div id="SE53223575" class="col-sm-12 col-md-3 columna-izquierda" edrag="04" elecod="PC_04" style="">
+      <a id="linkTickets">
+        <label id="labelTickets" edrag="05" elecod="PC_18" class="col-form-label label-large" style="margin-right:5px;color:white;">Todas las solicitudes</label>
+      </a>
+      <label edrag="05" elecod="PC_18" class="col-form-label label-large" style="color:white;margin-left:5px;margin-right:10px;">
+        <i class="fa fa-arrow-right"></i>
+      </label>
+      <label id="labelNumeroTicket" edrag="05" elecod="PC_18" class="col-form-label label-large" style="color:white;"></label>
+    </div>
+    <div id="SE92701790" class="col-sm-12 col-md-5 columna-centrada" edrag="04" elecod="PC_04" style="">
+      <label id="labelPrincipal" edrag="05" elecod="PC_18" class="col-form-label col-form-label-lg" style="color:white;font-size: x-large;">Solicitud</label>
+    </div>
+    <div id="SE61981606" class="col-sm-12 col-md-2 columna-centrada-derecha" edrag="04" elecod="PC_04" style="">
+      <div class="dropdown">
+        <button id="nuevo" type="button" class="btn btn-light btn-sm dropdown-toggle" edrag="00" elecod="PC_15" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
+          <i class="fa fa-plus-circle tx-18-force" style="margin-right:8px;"></i>Nuevo
+        </button>
+        <div class="dropdown-menu" x-placement="bottom-start"
+          style="position: absolute; transform: translate3d(0px, 31px, 0px); top: 0px; left: 0px; will-change: transform;">
+          <button id="nuevoTicket" class="dropdown-item" type="button" edrag="00" elecod="PC_15">Solicitud</button>
+          <button id="nuevaEmpresa" class="dropdown-item" type="button" edrag="00" elecod="PC_15">Empresa</button>
+          <button id="nuevoContacto" class="dropdown-item" type="button" edrag="00" elecod="PC_15">Socio de negocios</button>
+        </div>
+      </div>
+    </div>
+    <div id="SE61981606" class="col-sm-12 col-md-2 columna-centrada-derecha" edrag="04" elecod="PC_04"
+      style="display:none;">
+      <div id="buscarTicket_1" edrag="05" elecod="PC_10" class="form-group">
+        <input id="buscarTicket" name="buscarTicket" class="form-control" type="text" placeholder="Buscar..." style="">
+        <i class="fa fa-search" style="position: absolute; right: 25px; top: 50%; transform: translateY(-50%);"></i>
+      </div>
+    </div>
+  </div>
+
+  <div id="row-top-2" class="row" edrag="01" elecod="PC_03" style="background-color:#f5f7f9;">
+    <div id="SE52348126" class="col-sm-12 col-md-9" edrag="04" elecod="PC_04" style="">
+      <div id="SE67479556" class="row" edrag="01" elecod="PC_03">
+        <div id="columnaCheckeados" class="col-sm-12 col-md-12 columna-izquierda" edrag="04" elecod="PC_04" style="">
+          <button id="verSeguimientos" type="button" class="btn btn-light btn-sm" edrag="00" elecod="PC_15" style="">
+            <i class="fa fa-pencil"></i> Seguimientos
+          </button>
+          <button id="adjuntarAclaracion" type="button" class="btn btn-light btn-sm" edrag="00" elecod="PC_15" style="">
+            <i class="fa fa-file"></i> Adjuntar aclaración
+          </button>
+          <div id="seguimientoContainer" class="dropdown-menu p-2" style="display: none;">
+            <ul id="seguimientoList" class="list-group"></ul>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div id="columnasAdicionales" class="col-sm-12 col-md-3 columna-centrada" edrag="04" elecod="PC_04" style="">
+      <div id="SE54187927" class="col-sm-12 col-md-7 columna-centrada-busqueda" edrag="04" elecod="PC_04" style="">
+      </div>
+      <div id="SE17569102" class="col-sm-12 col-md-5 columna-centrada-derecha" edrag="04" elecod="PC_04" style="">
+        <button id="menuDetalles" type="button" class="btn btn-light btn-sm" edrag="00" elecod="PC_15" style="">
+          <i class="fa fa-angle-right"></i> Ocultar detalles
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <div id="row-tickets" class="row" edrag="01" elecod="PC_03" style="">
+    <div id="columnaTicket" class="col-sm" edrag="04" elecod="PC_04" style="flex:8;padding:0;">
+      <div id="cardTicket" class="container-fluid card" edrag="01" elecod="PC_01" style="margin-right:0px;">
+
+        <div id="alertaAclaracion" class="alert alert-warning" style="display:none; margin: 15px;">
+          <strong>Atención:</strong> Esta solicitud requiere una aclaración.
+        </div>
+        <div id="alertaDiferenciaAclaracion" class="alert alert-primary" style="display:none; margin: 15px;">
+          <strong>Diferencia detectada:</strong> El monto aclarado difiere del monto anticipado. Se puede derivar a
+          Tesorería con diferencia pendiente.
+        </div>
+
+        <div id="alertaAclaracionAceptada" class="alert alert-success" style="display:none; margin: 15px;">
+          <strong>Información:</strong> Aclaración aceptada.
+        </div>
+        <div id="alertaAclaracionRechazada" class="alert alert-danger" style="display:none; margin: 15px;">
+          <strong>Importante:</strong>Aclaración rechazada.
+        </div>
+
+        <div id="SE55658761" class="row row-card" edrag="01" elecod="PC_03" style="">
+          <div id="SE42103900" class="col-logo-originador" edrag="04" elecod="PC_04" style="">
+            <img id="imagen_perfil_ticket" edrag="01" elecod="PC_23" src="" height="" width="" class="col-form-label col-form-label-lg" style="margin-left:15px;">
+          </div>
+          <div id="SE85107172" class="col-sm-12 col-md-11 columna-vertical" edrag="04" elecod="PC_04" style="">
+            <label id="nombre_contacto_ticket" edrag="05" elecod="PC_18" class="col-form-label col-form-label-sm" style=""></label>
+            <label id="fecha_creacion" edrag="05" elecod="PC_18" class="col-form-label col-form-label-sm" style=""></label>
+          </div>
+          <div id="SE647218536" class="col-sm-12 col-md-12 columna-cuerpo-ticket" edrag="04" elecod="PC_04" style="">
+            <label id="labelMotivoTicket" edrag="05" elecod="PC_18" class="col-form-label col-form-label-sm" style=""></label>
+          </div>
+          <div id="SE73036724" class="col-sm-12 col-md-12" edrag="04" elecod="PC_04">
+            <div id="SE28450952" class="row columna-centrada-derecha" edrag="01" elecod="PC_03" style="">
+              <button id="editarDescripcion" type="button" class="btn btn-light btn-sm" edrag="00" elecod="PC_15">
+                <i class="fa fa-pencil" aria-hidden="true"></i> Editar
+              </button>
+              <button id="cancelarEdicion" type="button" class="btn btn-light btn-sm" edrag="00" elecod="PC_15" style="display:none;">
+                <i class="fa fa-times" aria-hidden="true"></i> Cancelar
+              </button>
+              <button id="guardarDescripcion" type="button" class="btn btn-light btn-sm" edrag="00" elecod="PC_15" style="display:none;">
+                <i class="fa fa-save" aria-hidden="true"></i> Guardar
+              </button>
+            </div>
+            <label id="labelCuerpoTicket" edrag="05" elecod="PC_18" class="col-form-label col-form-label-sm" style="display:block !important;"></label>
+            <div id="descripcion_1" edrag="05" elecod="PC_10" class="form-group" style="display:none;">
+              <input id="descripcion" name="descripcion" class="form-control form-control-sm" type="text" placeholder="" style="">
+            </div>
+          </div>
+          <div id="camposPersonalizadosTicket" class="container-fluid card" style="margin-top:15px; display:none;">
+            <div class="row row-card" style="padding: 15px;">
+              <div class="col-sm-12 col-md-12">
+                <label class="col-form-label col-form-label-lg">
+                  <i class="fa fa-list-alt"></i> Campos obligatorios
+                </label>
+              </div>
+              <div class="col-sm-12 col-md-12">
+                <div id="listaCamposTicket" class="campos-tarea-visual"></div>
+              </div>
+            </div>
+          </div>
+          <div id="columnaAdjuntos" class="col-sm-12 col-md-12 columna-izquierda" edrag="04" elecod="PC_04" style="">
+          </div>
+          <div id="columnaNotas" class="col-sm-12 col-md-12" edrag="04" elecod="PC_04" style="">
+          </div>
+          <div id="columnaDetallesNota" class="col-sm-12 col-md-12" edrag="04" elecod="PC_04" style="">
+            <div id="tipo_nota_1" edrag="05" elecod="PC_12" class="form-group columna-crear-nota">
+              <label id="labelCrearNota" edrag="05" elecod="PC_18" class="col-form-label col-form-label-lg" style="">Crear nota</label>
+              <select id="tipo_nota" name="tipo_nota" class="form-control form-control-sm" style="width:100px;">
+                <option value="1">Publica</option>
+                <option value="2">Privada</option>
+              </select>
+            </div>
+            <div id="descripcion_nota_1" edrag="05" elecod="PC_11" class="form-group">
+              <textarea id="descripcion_nota" name="descripcion_nota" class="form-control form-control-sm" placeholder=""></textarea>
+            </div>
+            <div id="labelNumeroAdjuntos" class="row" edrag="01" elecod="PC_03" style=""></div>
+            <div id="containerAdjuntos" class="container-fluid columna-izquierda" edrag="01" elecod="PC_01" style="">
+            </div>
+            <button id="adjuntarArchivo" type="button" class="btn btn-light btn-sm">
+              <i class="fa fa-paperclip"></i>
+            </button>
+            <input type="file" id="fileInput" class="file-input" accept="image/*,application/pdf" style="display:none;">
+            <div id="SE28878334" class="row" edrag="01" elecod="PC_03">
+              <div id="SE12379346" class="col-sm-12 col-md-8" edrag="04" elecod="PC_04" style=""></div>
+              <div id="SE84555759" class="col-sm-12 col-md-4 col-guardar-nota" edrag="04" elecod="PC_04" style="">
+                <button id="cancelarCrearNota" type="button" class="btn btn-light btn-sm btn-block" edrag="00" elecod="PC_15" style="">Cancelar</button>
+                <button id="guardarNota" type="button" class="btn btn-sm btn-block" edrag="00" elecod="PC_15" style="">Guardar</button>
+              </div>
+            </div>
+          </div>
+          <button id="crearNotaTicket" type="button" class="btn btn-light btn-sm" edrag="00" elecod="PC_15" style="">
+            <i class="fa fa-sticky-note"></i>  Añadir nota
+          </button>
+        </div>
+      </div>
+    </div>
+    <div id="columnaDatosTicket" class="col-sm" edrag="04" elecod="PC_04" style="flex:2;">
+      <div id="cardTicketDatos" class="container card" edrag="01" elecod="PC_01" style="">
+        <div id="SE57048116" class="row row-card" edrag="01" elecod="PC_03" style="">
+          <div id="SE54923829" class="col-sm-12 col-md-12" edrag="04" elecod="PC_04">
+            <div id="estado_1" edrag="05" elecod="PC_12" class="form-group">
+              <select id="estado" name="estado" class="form-control form-control-sm"></select>
+            </div>
+          </div>
+        </div>
+        <div id="datosTicket" class="row row-card" edrag="01" elecod="PC_03" style="">
+          <div id="SE9376368" class="col-sm-12 col-md-12" edrag="04" elecod="PC_04">
+            <div id="Tipo_1" class="form-group" edrag="05" elecod="PC_14">
+              <label id="label_Tipo" class="col-form-label col-form-label-sm">Tipo</label>
+              <input type="text" id="id_tipo_trabajo" class="form-control" readonly="">
+            </div>
+          </div>
+          <div id="SE31632657" class="col-sm-12 col-md-12" edrag="04" elecod="PC_04" style="display:none;">
+            <div id="etiquetas_1" class="form-group" edrag="05" elecod="PC_13">
+              <label id="label_etiquetas" class="col-form-label col-form-label-sm">Etiquetas</label>
+              <input id="etiquetas" name="etiquetas" type="text" placeholder="" class="form-control form-control-sm" style="">
+            </div>
+          </div>
+          <div id="SE3689378" class="col-sm-12 col-md-12" edrag="04" elecod="PC_04" style="display:none;">
+            <div id="empresa_1" class="form-group" edrag="05" elecod="PC_14">
+              <label id="label_empresa" class="col-form-label col-form-label-sm">Empresa</label>
+              <input id="empresa" name="empresa" type="text" placeholder="" class="form-control form-control-sm" style="" readonly="">
+            </div>
+          </div>
+          <div id="SE23032439" class="col-sm-12 col-md-12" edrag="04" elecod="PC_04">
+            <div id="prioridad_1" class="form-group" edrag="05" elecod="PC_14">
+              <label id="label_prioridad" class="col-form-label col-form-label-sm">Prioridad</label>
+              <select id="prioridad" name="prioridad" class="form-control form-control-sm"></select>
+            </div>
+          </div>
+          <div id="SE27135678" class="col-sm-12 col-md-12" edrag="04" elecod="PC_04" style="display:none;">
+            <div id="grupo_1" class="form-group" edrag="05" elecod="PC_14">
+              <label id="label_grupo" class="col-form-label col-form-label-sm">Grupo</label>
+              <select id="grupo" name="grupo" class="form-control form-control-sm"></select>
+            </div>
+          </div>
+          <div id="SE53537254" class="col-sm-12 col-md-12 col-agente" edrag="04" elecod="PC_04" style="display:none;">
+            <div class="vertical-line"></div>
+            <div id="agente_1" class="form-group" edrag="05" elecod="PC_14" style="width:100%;">
+              <label id="label_agente" class="col-form-label col-form-label-sm">Agente</label>
+              <select id="id_agente" name="id_agente" class="form-control form-control-sm"></select>
+            </div>
+          </div>
+          <div id="columnaCriticidad" class="col-sm-12 col-md-12" edrag="04" elecod="PC_04" style="margin-top:15px;">
+            <div id="bloqueCriticidad" class="col-sm-12 col-md-12 p-2 rounded border">
+              <h6 class="mb-3 fw-bold">Fecha de compromiso de pago</h6>
+              <!-- Fecha propuesta por el solicitante -->
+              <div id="bloqueFechaCriticidadSolicitante" class="form-group mb-2" edrag="05" elecod="PC_CRITICIDAD_SOL">
+                <label for="fechaCriticidadSolicitante" class="col-form-label col-form-label-sm">Propuesta por solicitante</label>
+                <input id="fechaCriticidadSolicitante" name="fechaCriticidadSolicitante" type="text" placeholder="yyyy-mm-dd" class="form-control form-control-sm flatpickr-fecha">
+              </div>
+              <!-- Fecha ratificada por el autorizador -->
+              <div id="bloqueFechaCriticidadAutorizador" class="form-group mb-2" edrag="06" elecod="PC_CRITICIDAD_AUT">
+                <label for="fechaCriticidadAutorizador" class="col-form-label col-form-label-sm">Ratificada por autorizador</label>
+                <input id="fechaCriticidadAutorizador" name="fechaCriticidadAutorizador" type="text" placeholder="yyyy-mm-dd" class="form-control form-control-sm flatpickr-fecha">
+              </div>
+              <!-- Fecha definitiva por Tesorería -->
+              <div id="bloqueFechaCriticidadTesoreria" class="form-group" edrag="07" elecod="PC_CRITICIDAD_TES">
+                <label for="fechaCriticidadTesoreria" class="col-form-label col-form-label-sm">Definida por tesorería</label>
+                <input id="fechaCriticidadTesoreria" name="fechaCriticidadTesoreria" type="text" placeholder="yyyy-mm-dd" class="form-control form-control-sm flatpickr-fecha">
+              </div>
+            </div>
+          </div>
+          <div id="columnaTipoPago" class="col-sm-12 col-md-12" edrag="04" elecod="PC_04">
+            <div id="bloqueTipoPago" class="col-sm-12 col-md-12 p-2 rounded border">
+              <h6 class="mb-3 fw-bold">Tipo de pago</h6>
+              <!-- Tipo de pago mostrado solo como texto -->
+              <div id="bloquePagoTesoreria" class="form-group mb-2" edrag="05" elecod="PC_TIPO_PAGO">
+                <input id="inputTipoPagoTesoreria" name="inputTipoPagoTesoreria" type="text" class="form-control form-control-sm" readonly="">
+              </div>
+            </div>
+          </div>
+          <div id="SE98765432" class="col-sm-12 col-md-12" edrag="04" elecod="PC_04" style="display:none;">
+            <div id="selectorRequiereFirmaContainer" class="form-group" style="display: none; margin-top: 16px;">
+              <label for="selectorRequiereFirma" class="col-form-label col-form-label-sm">¿Requiere firma?</label>
+              <select id="selectorRequiereFirma" class="form-control form-control-sm">
+                <option value="1">Sí</option>
+                <option value="2">No</option>
+              </select>
+            </div>
+          </div>
+          <div id="colFirmaContacto" class="col-sm-12 col-md-12" edrag="04" elecod="PC_04"
+            style="padding: 20px 20px 20px 20px; display:none;">
+            <label id="SE28375408" edrag="05" elecod="PC_18" class="col-form-label col-form-label-sm">Firma contacto</label>
+            <div id="firmaContainer" class="firma-container"
+              style="cursor: pointer; border: 1px dashed #ccc; padding: 20px; text-align: center;">
+              <span>Haz clic para añadir una firma</span>
+            </div>
+          </div>
+        </div>
+        <div id="SE94733740" class="row row-card" edrag="01" elecod="PC_03" style="margin:15px !important;">
+          <div id="SE96754975" class="col-sm-12 col-md-12" edrag="04" elecod="PC_04" style="">
+            <div id="SE80135997" class="row" edrag="01" elecod="PC_03">
+              <!-- Solicitante -->
+              <button id="btnEnviarSolicitud" type="button" class="btn btn-primary btn-sm" edrag="00" elecod="PC_15" style="flex:1;margin-top:10px;">Enviar solicitud</button>
+              <!-- Autorizador -->
+              <button id="rechazar" type="button" class="btn btn-danger btn-sm" edrag="00" elecod="PC_15" style="flex:1;margin-top:10px;">Rechazar</button>
+              <button id="validar" type="button" class="btn btn-success btn-sm" edrag="00" elecod="PC_15" style="flex:1;margin-top:10px;">Validar</button>
+              <!-- Contabilidad -->
+              <button id="btnContabilizar" type="button" class="btn btn-primary btn-sm" edrag="00" elecod="PC_15" style="flex:1;margin-top:10px;">Contabilizar</button>
+              <button id="btnSolicitarAclaracionContab" type="button" class="btn btn-warning btn-sm" edrag="00" elecod="PC_15" style="flex:1;margin-top:10px;">Solicitar aclaración</button>
+              <button id="btnRechazarContabilidad" type="button" class="btn btn-danger btn-sm" edrag="00" elecod="PC_15" style="flex:1;margin-top:10px;">Rechazar</button>
+              <!-- Tesorería -->
+              <button id="btnProgramarPago" type="button" class="btn btn-info btn-sm" edrag="00" elecod="PC_15" style="flex:1;margin-top:10px;">Programar pago</button>
+              <button id="btnConfirmarTransferencia" type="button" class="btn btn-success btn-sm" edrag="00" elecod="PC_15" style="flex:1;margin-top:10px;">Confirmar pago</button>
+              <button id="btnConfirmarRecaudacion" type="button" class="btn btn-success btn-sm" edrag="00" elecod="PC_15" style="flex:1;margin-top:10px;">Confirmar recaudación</button>
+              <button id="btnRechazarTesoreria" type="button" class="btn btn-danger btn-sm" edrag="00" elecod="PC_15" style="flex:1;margin-top:10px;">Rechazar</button>
+              <!-- Aclaraciones -->
+              <button id="btnAceptarAclaracion" type="button" class="btn btn-outline-success btn-sm" edrag="00" elecod="PC_15" style="flex:1;margin-top:10px;">Aceptar aclaración</button>
+              <button id="btnPasarTesoreriaConDiferencia" type="button" class="btn btn-outline-warning btn-sm" style="flex:1;margin-top:10px;">Pago por diferencia</button>
+              <button id="btnRechazarAclaracion" type="button" class="btn btn-outline-danger btn-sm" edrag="00" elecod="PC_15" style="flex:1;margin-top:10px;">Rechazar aclaración</button>
+              <!-- Cierre -->
+              <button id="btnCerrarSolicitud" type="button" class="btn btn-dark btn-sm" edrag="00" elecod="PC_15" style="flex:1;margin-top:10px; display: none;">Cerrar solicitud</button>
+            </div>
+            <div id="SE16517722" class="row" edrag="01" elecod="PC_03">
+              <button id="BOTONERA_SAVE" type="button" class="btn btn-light btn-sm btn-block" edrag="00" elecod="PC_15" style="">
+                <i class="fa fa-save"></i> Guardar
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div id="columnaDetalles" class="col-sm" edrag="04" elecod="PC_04" style="flex:2;">
+      <div id="row-datos-contacto" class="row" edrag="01" elecod="PC_03" style="display:none;">
+        <div id="container-datos-contacto" class="container card" edrag="01" elecod="PC_02" style="">
+          <div id="row-header-contacto" class="row row-card" edrag="01" elecod="PC_03" style="">
+            <div id="SE19692301" class="col-sm-12 col-md-10" edrag="04" elecod="PC_04" style="">
+              <label id="SE85295475" edrag="05" elecod="PC_18" class="col-form-label col-form-label-lg" style="">
+                <i class="fa fa-address-card"></i> Datos de originador
+              </label>
+            </div>
+            <div id="SE87478633" class="col-sm-12 col-md-2" edrag="04" elecod="PC_04" style="">
+              <button class="btn btn-link" type="button" data-toggle="collapse" data-target="#datosContactoCollapse" aria-expanded="true" aria-controls="datosContactoCollapse">
+                <i class="fa fa-chevron-down"></i>
+              </button>
+            </div>
+          </div>
+          <div id="datosContactoCollapse" class="row collapse show" edrag="01" elecod="PC_03" style="">
+            <div id="SE29811544" class="col-sm-12 col-md-12" edrag="04" elecod="PC_04">
+              <div id="SE2104856" class="row row-card" edrag="01" elecod="PC_03">
+                <div id="SE15110276" class="col-sm-12 col-md-4 col-logo-originador" edrag="04" elecod="PC_04" style="">
+                  <img id="imagen_perfil" edrag="05" elecod="PC_18" class="col-form-label col-form-label-lg">
+                </div>
+                <div id="SE89820150" class="col-sm-12 col-md-8 columna-vertical" edrag="04" elecod="PC_04" style="">
+                  <label id="nombre_contacto" edrag="05" elecod="PC_18" class="col-form-label col-form-label-sm">Nombre cliente</label>
+                </div>
+                <div id="SE24959756" class="col-sm-12 col-md-12 columna-vertical" edrag="04" elecod="PC_04" style="">
+                  <label id="email" edrag="05" elecod="PC_18" class="col-form-label col-form-label-sm" style="">Correo</label>
+                  <label id="nombre_empresa" edrag="05" elecod="PC_18" class="col-form-label col-form-label-sm">Empresa</label>
+                </div>
+                <div id="SE96336863" class="col-sm-12 col-md-12" edrag="04" elecod="PC_04">
+                  <hr>
+                  <label id="ticketsAnterioresContacto" edrag="05" elecod="PC_18" class="col-form-label col-form-label-lg" style="">
+                    Solicitudes anteriores
+                  </label>
+                  <div id="rowTicketsAnteriores" class="row row-card-tickets-anteriores" edrag="01" elecod="PC_03">
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div id="row-tareas-servicio" class="row" edrag="01" elecod="PC_03" style="">
+        <div id="container-tareas-servicio" class="container card" edrag="01" elecod="PC_02" style="">
+          <div id="row-header-tareas-servicio" class="row row-card" edrag="01" elecod="PC_03" style="">
+            <div id="SE76071221" class="col-sm-12 col-md-10" edrag="04" elecod="PC_04" style="">
+              <!-- Se actualiza la etiqueta para reflejar que este contenedor ahora muestra tickets de aclaración -->
+              <label id="SE43276958" edrag="05" elecod="PC_18" class="col-form-label col-form-label-lg">
+                <i class="fa fa-comments"></i> Solicitudes de aclaración
+              </label>
+            </div>
+            <div id="SE70573502" class="col-sm-12 col-md-2" edrag="04" elecod="PC_04">
+              <button class="btn btn-link collapsed" type="button" data-toggle="collapse" data-target="#tareasServicioCollapse" aria-expanded="false" aria-controls="tareasServicioCollapse">
+                <i class="fa fa-chevron-down"></i>
+              </button>
+            </div>
+          </div>
+          <div id="tareasServicioCollapse" class="row collapse" edrag="01" elecod="PC_03" style="">
+            <div id="SE52552250" class="col-sm-12 col-md-12" edrag="04" elecod="PC_04">
+              <div id="rowTareasServicio" class="row row-card row-card-tareas" edrag="01" elecod="PC_03" style="">
+                <!-- Aquí se cargarán los tickets de aclaración -->
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div id="empresaIframeContainer" class="iframe-container" style="display:none;">
+      <iframe id="empresaIframe" class="iframe"></iframe>
+    </div>
+    <div id="contactoIframeContainer" class="iframe-container" style="display:none;">
+      <iframe id="contactoIframe" class="iframe"></iframe>
+    </div>
+
+    <div class="modal fade" id="modalFirma" tabindex="-1" role="dialog" aria-labelledby="modalFirmaLabel"
+      aria-hidden="true">
+      <div class="modal-dialog" role="document">
+        <div class="modal-content">
+          <div class="modal-header">
+            <h5 class="modal-title" id="modalFirmaLabel">Añadir Firma</h5>
+            <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+              <span aria-hidden="true">×</span>
+            </button>
+          </div>
+          <div class="modal-body">
+            <!-- Canvas para dibujar la firma -->
+            <h6>Dibujar Firma</h6>
+            <canvas id="canvasFirma" style="border: 1px solid #000; width: 100%; height: 200px;"></canvas>
+            <!-- Opción para subir un archivo -->
+            <hr>
+            <h6>Subir firma desde un archivo</h6>
+            <input type="file" id="inputSubirFirma" accept="image/png, image/jpeg" style="margin-bottom: 10px;">
+            <div id="previewSubidaFirma" style="display: none;">
+              <img id="imgSubidaFirma" src="" alt="Vista previa de firma subida" style="width: 100%; height: auto; border: 1px solid #000;">
+            </div>
+          </div>
+          <div class="modal-footer">
+            <button type="button" class="btn btn-secondary" id="limpiarFirma">Limpiar</button>
+            <button type="button" class="btn btn-primary" id="guardarFirma">Guardar</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
