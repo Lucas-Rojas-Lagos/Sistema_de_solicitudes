@@ -1,0 +1,1145 @@
+.select2-container--default .select2-selection--single {
+  background: #eaeaea !important;
+  color: black;
+  font-size: 18px !important;
+  /* Tamaño de letra más grande */
+  font-weight: 500;
+  border: 1px solid transparent !important;
+  border-radius: 4px;
+  height: 48px !important;
+  /* Altura aumentada */
+  display: flex !important;
+  align-items: center !important;
+}
+
+.select2-container--default .select2-selection--single .select2-selection__rendered {
+  line-height: 48px !important;
+  /* Asegurar que el texto esté centrado verticalmente */
+  padding-left: 10px;
+  /* Ajustar padding izquierdo */
+}
+
+.select2-container--default .select2-selection--single .select2-selection__arrow {
+  height: 48px !important;
+  /* Asegurar que la flecha esté centrada verticalmente */
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.select2-container--default .select2-selection--single .select2-selection__arrow b {
+  border-color: black transparent transparent transparent;
+  border-width: 6px 6px 0 6px;
+  height: 0;
+  width: 0;
+  display: inline-block;
+  margin-top: -2px;
+  /* Ajuste para centrar verticalmente */
+}
+
+.select2-container--default .select2-results__option {
+  font-size: 18px !important;
+  /* Tamaño de letra más grande */
+}
+
+.select2-container--default .select2-results__option--highlighted {
+  background-color: #dedbdb !important;
+  /* Color de fondo gris al hacer hover */
+  border-left: 5px solid #007866 !important;
+  color: black !important;
+}
+
+.select2-container--default .select2-selection--single .select2-selection__arrow {
+  height: 26px;
+  position: absolute;
+  right: 1px;
+  width: 23px !important;
+  top: auto !important;
+}
+
+#row-top-1 {
+  background-color: #1D2939;
+}
+
+#row-top-2 {
+  padding-top: 10px;
+  padding-bottom: 10px;
+  min-height: 60px;
+}
+
+.btn-light {
+  background-color: #e2e6e9 !important;
+}
+
+
+#labelMotivoTicket {
+  font-size: x-large;
+}
+
+
+button {
+  display: flex;
+  align-items: center;
+  background-color: #007BFF;
+  color: white;
+  border: none;
+
+  padding: 10px 20px;
+  border-radius: 5px;
+  cursor: pointer;
+  font-size: 16px;
+  margin-right: 10px;
+  /* Espacio entre botones */
+}
+
+/* Estilos específicos para los botones de editar y eliminar */
+.btn-editar {
+  background-color: #28a745;
+  /* Color verde para editar */
+}
+
+.btn-eliminar {
+  background-color: #dc3545;
+  /* Color rojo para eliminar */
+}
+
+.columna-izquierda {
+  display: flex;
+  align-items: center;
+  justify-content: flex-start;
+}
+
+.columna-centrada {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.columna-centrada-busqueda {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.columna-centrada-derecha {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+}
+
+button i .fa-plus-circle {
+  margin-right: 8px;
+}
+
+
+.label-large {
+  font-size: large;
+  font-weight: 700;
+}
+
+
+
+
+
+
+.form-check-inline {
+  margin: 10px !important;
+}
+
+
+#columnaCheck {
+  display: flex;
+  align-items: center;
+  justify-content: flex-start;
+  height: 100%;
+  /* Asegúrate de que el contenedor tenga altura definida */
+}
+
+#checkTodos_C {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.form-check-input {
+  transform: scale(1.5);
+  /* Ajusta el valor para hacer el checkbox más grande */
+  margin: 0;
+  /* Elimina cualquier margen adicional que el checkbox pueda tener */
+}
+
+#validar {
+  background-color: #007866;
+  color: white;
+  border-color: #007866;
+}
+
+
+
+.search-container {
+  position: relative;
+  width: 300px;
+  /* Ajusta el tamaño según sea necesario */
+}
+
+.search-container input {
+  width: 100%;
+  padding: 5px 30px 5px 10px;
+  /* Reduce el padding para hacer el input menos alto */
+  border: 1px solid #ccc;
+  border-radius: 5px;
+  font-size: 16px;
+  outline: none;
+  box-sizing: border-box;
+}
+
+.search-container::before {
+  content: "\f002";
+  /* Código Unicode para el ícono de lupa de Font Awesome */
+  font-family: "Font Awesome 5 Free";
+  font-weight: 900;
+  position: absolute;
+  right: 10px;
+  top: 50%;
+  transform: translateY(-50%);
+  color: #888;
+  /* Color de la lupa */
+  pointer-events: none;
+  /* Para que el ícono no interfiera con la interacción del input */
+}
+
+.custom-form-group {
+  margin-bottom: 0;
+  /* Elimina el margen inferior */
+}
+
+.custom-form-group .form-control {
+  width: 150px;
+  height: 35px !important;
+  padding: 0px 5px 0px 1px;
+  font-size: 14px;
+  /* Ajusta el tamaño de la fuente según sea necesario */
+  box-sizing: border-box;
+  margin-left: 5px;
+}
+
+
+.btn-navegacion {
+  background-color: #e2e6e9;
+  color: black;
+  border: none;
+  padding: 10px;
+  border-radius: 5px;
+  cursor: pointer;
+  font-size: 10px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin: 0 10px;
+}
+
+.btn-navegacion i {
+  font-size: 10px;
+  /* Tamaño del ícono */
+}
+
+#numeroPagina {
+  font-size: 16px;
+  font-weight: bold;
+}
+
+.vertical-line {
+  border-left: 2px solid #ccc;
+  /* Ajusta el color y el grosor de la línea */
+  height: 100%;
+  /* Ajusta la altura de la línea según sea necesario */
+  margin-left: 5px;
+  margin-right: 10px;
+}
+
+.col-agente {
+  display: flex;
+  align-items: center;
+  flex-direction: row;
+  justify-content: flex-start;
+}
+
+.columna-vertical {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+}
+
+.col-icono-ticket {
+  padding: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.col-ticket-anteriores {
+  padding-left: 10px;
+  padding-top: 5px;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  justify-content: center;
+}
+
+.card {
+  border-radius: 8px;
+  /* Bordes redondeados */
+  padding: 10px;
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+  /* Sombra leve */
+  background-color: #fff;
+  /* Fondo blanco */
+  margin: 5px;
+  /* Espaciado externo */
+  transition: box-shadow 0.3s ease;
+  /* Transición para efectos suaves */
+}
+
+.card:hover {
+  box-shadow: 0 8px 16px rgba(0, 0, 0, 0.2);
+  /* Sombra más intensa al pasar el ratón */
+}
+
+.row-card {
+  margin: 0 !important;
+}
+
+.col-form-label-lg {
+  font-size: larger;
+}
+
+.columna-cuerpo-ticket {
+  padding-top: 10px;
+  padding-bottom: 10px;
+}
+
+#descripcion_nota {
+  min-height: 150px;
+  resize: vertical;
+}
+
+.file-input {
+  display: none;
+}
+
+#containerAdjuntos .adjunto {
+  display: flex;
+  align-items: center;
+  margin: 10px 0;
+}
+
+#containerAdjuntos span {
+  margin-left: 10px;
+}
+
+#columnaDetallesNota {
+  display: none;
+  /* Inicialmente oculto */
+}
+
+#labelNumeroAdjuntos {
+  display: none;
+  /* Inicialmente oculto */
+  margin-left: 5px;
+}
+
+
+
+#imagen_perfil,
+#imagen_perfil_ticket {
+  width: 50px;
+  /* Ancho de la imagen */
+  height: auto;
+  /* Alto de la imagen */
+  border-radius: 50%;
+  /* Hacer la imagen circular */
+  object-fit: cover;
+  /* Asegurarse de que la imagen cubra el contenedor sin distorsionarse */
+  margin-right: 0px;
+  /* Espacio a la derecha de la imagen */
+}
+
+#BOTONERA_SEND,
+#guardarNota {
+  background-color: #1D2939;
+  color: white;
+}
+
+.col-guardar-nota {
+  display: flex;
+}
+
+#columnaDetallesNota {
+  border-radius: 15px;
+  /* Ajusta el valor según tus necesidades */
+  border: 1px solid #ddd;
+  /* Opcional: agrega un borde con color gris claro */
+  padding: 15px;
+  /* Opcional: agrega un padding interno */
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+  /* Opcional: agrega una sombra sutil */
+  background-color: #fff;
+  /* Opcional: establece un fondo blanco */
+}
+
+.columna-crear-nota {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.adjunto {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 10px;
+  margin: 10px 0;
+  border: 1px solid #ddd;
+  border-radius: 5px;
+  background-color: #f9f9f9;
+}
+
+/* Estilos para las notas */
+.nota {
+  border: 1px solid #ddd;
+  border-radius: 5px;
+  padding: 10px;
+  margin-bottom: 10px;
+  background-color: #f9f9f9;
+}
+
+.nota p {
+  margin: 0;
+}
+
+.nota small {
+  display: block;
+  margin-top: 10px;
+  color: #666;
+}
+
+#columnaNotas {
+  padding: 0;
+}
+
+#fecha_creacion {
+  font-style: italic;
+}
+
+/* Estilos para los tickets anteriores */
+.row-card-ticket {
+  border: 1px solid #ddd;
+  border-radius: 5px;
+  padding: 10px;
+  margin-bottom: 10px;
+  background-color: #f9f9f9;
+  border-left: 6px solid #007866;
+}
+
+.row-card-tickets-anteriores,
+.row-card-tareas {
+  border-radius: 5px;
+  padding: 10px;
+  margin-bottom: 10px;
+}
+
+.col-icono-ticket {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 100%;
+  width: 100%;
+}
+
+.col-ticket-anteriores label {
+  display: block;
+}
+
+.fas.fa-ticket-alt {
+  color: #007bff;
+  font-size: 1.5em;
+}
+
+.image-adjunto-container {
+  position: relative;
+  display: inline-block;
+  margin-left: 10px;
+}
+
+.image-adjunto-container img {
+  width: 100%;
+  transition: opacity 0.3s ease;
+}
+
+.image-adjunto-container:hover img {
+  opacity: 0.6;
+}
+
+.view-button {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  /* Cambiado de right a left */
+  transform: translate(-50%, -50%);
+  background: none;
+  border: none;
+  cursor: pointer;
+  display: none;
+  color: blue;
+  font-size: 2.0em;
+}
+
+
+
+.image-adjunto-container:hover .view-button {
+  display: block;
+}
+
+
+.col-logo-originador {
+  padding: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+#containerCrearTareaServicio {
+  position: fixed;
+  top: 60px;
+  right: -1000px;
+  width: 1000px;
+  height: calc(100% - 60px);
+  /* Ajusta la altura restando el espacio superior */
+  background-color: #fff;
+  box-shadow: -2px 0 5px rgba(0, 0, 0, 0.5);
+  transition: right 0.3s ease-in-out;
+  overflow-y: auto;
+  z-index: 1000;
+}
+
+#containerCrearTareaServicio.show {
+  right: 0;
+  z-index: 1000;
+}
+
+#columnaLabelNuevaTareaServicio {
+  position: sticky;
+  top: 0;
+  background-color: #fff;
+  z-index: 3;
+  /* Asegura que la etiqueta esté por encima del contenido */
+  padding-top: 10px;
+  /* Agrega un poco de espacio para mayor claridad */
+}
+
+#columnaBotonesCrearTarea {
+  position: sticky;
+  bottom: 0;
+  background-color: #fff;
+  z-index: 3;
+  /* Asegura que los botones estén por encima del contenido */
+  padding-bottom: 10px;
+  /* Agrega un poco de espacio para mayor claridad */
+}
+
+#crearTarea {
+  background-color: #007866;
+}
+
+.tox-edit-area {
+  right: 0 !important;
+  height: auto;
+}
+
+.custom-tinymce {
+  height: auto !important;
+  min-height: 100px;
+  /* Puedes ajustar este valor para un mínimo de altura */
+  overflow: hidden;
+}
+
+
+#labelEstadoTicket {
+  font-size: x-large;
+}
+
+
+
+
+#containerAdjuntosTarea {
+  background-color: white;
+}
+
+#containerAdjuntosTarea .adjunto {
+  display: flex;
+  align-items: center;
+  margin: 10px 0;
+}
+
+#containerAdjuntosTarea span {
+  margin-left: 10px;
+}
+
+#labelNumeroAdjuntosTarea {
+  display: none;
+  /* Inicialmente oculto */
+  margin-left: 5px;
+}
+
+.adjunto {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 10px;
+  margin: 10px 0;
+  border: 1px solid #ddd;
+  border-radius: 5px;
+  background-color: #f9f9f9;
+}
+
+.image-adjunto-container {
+  position: relative;
+  display: inline-block;
+  max-width: 70%;
+  margin-left: 10px;
+}
+
+.image-adjunto-container img {
+  width: 100%;
+  transition: opacity 0.3s ease;
+}
+
+.image-adjunto-container:hover img {
+  opacity: 0.6;
+}
+
+
+
+#adjuntarArchivoTarea {
+  background-color: #007866;
+}
+
+#tareasServicioCollapse,
+#datosContactoCollapse {
+  max-height: calc(100vh - 200px);
+  /* Ajusta 200px según el espacio ocupado por otros elementos en la página */
+  overflow-y: auto;
+}
+
+#seguimientoContainer {
+  width: 700px;
+}
+
+.seguimiento-item {
+  padding: 5px;
+  margin-bottom: 5px;
+
+}
+
+.list-group-item {
+  position: relative;
+  display: block;
+  padding: 1px !important;
+  background-color: #fff;
+  border: 1px solid rgba(0, 0, 0, 0.125);
+  border-left: 6px solid #007866;
+  margin: 2px;
+
+}
+
+
+/* ===== MEJORAS VISUALES PARA CAMPOS DE FORMULARIO ===== */
+.form-group {
+  margin-bottom: 16px;
+}
+
+.form-group label,
+.form-label,
+#selectorRequiereFirmaContainer label {
+  display: block;
+  font-weight: 500;
+  font-size: 14px;
+  margin-bottom: 6px;
+  color: #333;
+}
+
+.form-group select,
+.form-group input[type="text"],
+.form-group input[type="number"],
+.form-group textarea,
+#selectorRequiereFirmaContainer select {
+  width: 100%;
+  padding: 6px 10px;
+  font-size: 14px;
+  border: 1px solid #ccc;
+  border-radius: 6px;
+  background-color: #fff;
+  box-sizing: border-box;
+}
+
+/* Ajuste estético solo para el campo ¿Requiere firma? */
+#selectorRequiereFirmaContainer {
+  margin-top: 16px;
+}
+
+#selectorRequiereFirmaContainer select {
+  margin-top: 4px;
+}
+
+/* Responsive opcional */
+@media (max-width: 576px) {
+
+  .form-group label,
+  .form-label,
+  #selectorRequiereFirmaContainer label {
+    font-size: 13px;
+  }
+
+  .form-group select,
+  .form-group input,
+  .form-group textarea,
+  #selectorRequiereFirmaContainer select {
+    font-size: 13px;
+    padding: 5px 8px;
+  }
+}
+
+#crearNota,
+#crearTareaServicio {
+  display: none !important;
+}
+
+/* Estilo general de la card contenedora */
+#camposPersonalizadosTicket {
+  background-color: #ffffff;
+  border: 1px solid #ddd;
+  border-radius: 12px;
+  padding: 20px;
+  margin-top: 20px;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.08);
+}
+
+/* Título principal de la sección */
+#camposPersonalizadosTicket label.col-form-label-lg {
+  font-size: 1 rem;
+  font-weight: 600;
+  color: #333;
+  margin-bottom: 15px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+/* Contenedor de cada campo individual */
+.campoItemTarea {
+  margin-bottom: 12px;
+  padding-bottom: 10px;
+  border-bottom: 1px dashed #e0e0e0;
+}
+
+.campoItemTarea:last-child {
+  border-bottom: none;
+}
+
+/* Estilo de la etiqueta del campo */
+.campoItemTarea label {
+  font-weight: 600;
+  color: #444;
+  margin-bottom: 4px;
+  display: inline-block;
+}
+
+/* Estilo del valor del campo */
+.campoItemTarea span {
+  color: #222;
+}
+
+/* Estilo del botón de descarga */
+.campoItemTarea a.btn-outline-primary {
+  font-size: 0.875rem;
+  padding: 4px 12px;
+  border-radius: 6px;
+  text-decoration: none;
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+}
+
+.campoItemTarea a.btn-outline-primary i {
+  margin-right: 4px;
+}
+
+/* Responsive para móviles */
+@media (max-width: 768px) {
+  #camposPersonalizadosTicket {
+    padding: 15px;
+  }
+
+  .campoItemTarea {
+    font-size: 0.95rem;
+  }
+}
+
+#seguimientoContainer {
+  width: 700px;
+  max-height: 400px;
+  /* más acotado para forzar scroll */
+  overflow-y: auto;
+  padding: 10px;
+  border: 1px solid #ccc;
+  border-radius: 6px;
+  background-color: white;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.iframe-container {
+  max-height: auto;
+  overflow: auto;
+  border: 1px solid #ddd;
+  border-radius: 6px;
+  margin-top: 10px;
+}
+
+.iframe {
+  width: 100%;
+  height: 1000px;
+  /* Asegura una altura que permita scroll interno */
+  border: none;
+}
+
+
+#bloqueCriticidad {
+  background-color: #f9f9f9;
+  /* Fondo suave */
+  border: 1px solid #dee2e6;
+  border-radius: 8px;
+  padding: 15px;
+  margin-bottom: 15px;
+}
+
+#bloqueCriticidad h6 {
+  font-size: 0.95rem;
+  font-weight: 600;
+  margin-bottom: 12px;
+  color: #333;
+}
+
+#bloqueCriticidad .form-group label {
+  font-size: 0.85rem;
+  font-weight: 500;
+  color: #555;
+}
+
+#bloqueCriticidad input.form-control-sm {
+  font-size: 0.85rem;
+  padding: 4px 8px;
+  border-radius: 6px;
+}
+
+#BOTONERA_SAVE {
+  display: none;
+}
+
+.bloque-tarea {
+  border: 1px solid #ddd;
+  border-left: 4px solid #007866;
+  border-radius: 6px;
+  padding: 20px;
+  margin-bottom: 30px;
+  background-color: #fdfdfd;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.05);
+}
+
+.bloque-tarea h5 {
+  font-size: 18px;
+  font-weight: 700;
+  color: #007866;
+  margin-bottom: 4px;
+}
+
+.bloque-tarea p {
+  font-size: 14px;
+  color: #555;
+  margin-bottom: 15px;
+}
+
+.campo-personalizado {
+  margin-bottom: 20px;
+  padding: 10px 15px;
+  border: 1px solid #e3e3e3;
+  border-radius: 6px;
+  background-color: #fafafa;
+}
+
+.campo-personalizado label {
+  display: block;
+  font-weight: 600;
+  color: #333;
+  margin-bottom: 6px;
+  font-size: 14px;
+}
+
+.campo-personalizado input[type="text"],
+.campo-personalizado input[type="number"],
+.campo-personalizado input[type="date"],
+.campo-personalizado select,
+.campo-personalizado textarea {
+  width: 100%;
+  font-size: 14px;
+  padding: 6px 10px;
+  border: 1px solid #ccc;
+  border-radius: 4px;
+  background-color: #fff;
+}
+
+.campo-personalizado .form-check {
+  margin-bottom: 5px;
+}
+
+.campo-personalizado .form-check-input {
+  margin-right: 8px;
+}
+
+.campo-personalizado .form-check-label {
+  font-weight: 400;
+  font-size: 14px;
+  color: #444;
+}
+
+.form-check-inline {
+  margin-right: 20px !important;
+}
+
+.input-group.upload-componente {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.input-group.upload-componente input[type="file"] {
+  max-width: 200px;
+}
+
+.input-group.upload-componente input[readonly] {
+  background-color: #e9ecef;
+  border-radius: 4px;
+  font-size: 13px;
+}
+
+.input-group.upload-componente .btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 5px 10px;
+  font-size: 14px;
+  height: 35px;
+  line-height: 1;
+  border-radius: 4px;
+}
+
+.input-group.upload-componente .btn-danger {
+  background-color: #dc3545;
+  border: none;
+  color: white;
+}
+
+.input-group.upload-componente .btn-success {
+  background-color: #28a745;
+  border: none;
+  color: white;
+}
+
+.campo-personalizado label.required::after {
+  content: " *";
+  color: red;
+  font-weight: bold;
+}
+
+#crearTicket {
+  margin-top: 30px;
+}
+
+.upload-componente .form-control {
+  border-radius: 4px 0 0 4px;
+  font-size: 14px;
+  height: 36px;
+}
+
+.upload-componente .input-group-append .btn {
+  border-radius: 0;
+  height: 36px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.upload-componente .btn-sm i {
+  font-size: 14px;
+}
+
+.upload-componente .btn-outline-secondary {
+  background-color: #f8f9fa;
+}
+
+/* ==== BLOQUES GENERALES ==== */
+.campo-personalizado {
+  border: 1px solid #ccc;
+  border-radius: 6px;
+  padding: 12px 16px;
+  background-color: #f9f9f9;
+  margin-bottom: 20px;
+}
+
+/* ==== HEADER DEL CAMPO ==== */
+.campo-personalizado>label {
+  font-weight: 600;
+  color: #333;
+  margin-bottom: 8px;
+  display: block;
+}
+
+/* ==== BOTONES DE AGREGAR ==== */
+.bloque-distribucion-cc button.btn-outline-info,
+.bloque-adjuntos-dinamico button.btn-outline-info,
+.bloque-archivos-simples button.btn-outline-info {
+  background-color: #007866;
+  color: white;
+  border-color: #007866;
+  float: right;
+  margin-bottom: 10px;
+}
+
+.bloque-distribucion-cc button.btn-outline-info:hover,
+.bloque-adjuntos-dinamico button.btn-outline-info:hover,
+.bloque-archivos-simples button.btn-outline-info:hover {
+  background-color: #005e51;
+  border-color: #005e51;
+}
+
+/* ==== LÍNEAS INTERNAS DE BLOQUES ==== */
+.linea-distribucion,
+.linea-bloque-adjunto,
+.linea-bloque-archivo {
+  border-bottom: 1px dashed #ccc;
+  padding-bottom: 10px;
+  margin-bottom: 10px;
+}
+
+.linea-distribucion:last-child,
+.linea-bloque-adjunto:last-child,
+.linea-bloque-archivo:last-child {
+  border-bottom: none;
+}
+
+/* ==== INPUTS DE MONTO ==== */
+.input-monto-linea {
+  text-align: right;
+}
+
+/* ==== NOMBRE DE ARCHIVO SUBIDO ==== */
+.nombre-archivo {
+  margin-left: 8px;
+  font-style: italic;
+  color: #007866;
+}
+
+/* ==== ICONO BASURA ==== */
+.btnEliminarLinea,
+.btnEliminarLineaArchivo {
+  background-color: #d9534f;
+  border: none;
+}
+
+.btnEliminarLinea i,
+.btnEliminarLineaArchivo i {
+  color: white;
+}
+
+#contenedorTareas {
+  max-width: auto;
+  margin: 0 auto;
+  padding: 0 15px;
+}
+
+#SE65779852 {
+  display: flex;
+  justify-content: flex-end;
+}
+
+
+/* Contenedor del bloque empresa + CC */
+.bloque-empresa-cc {
+  border: 1px solid #ccc;
+  border-radius: 6px;
+  padding: 15px;
+  background-color: #f9f9f9;
+  margin-bottom: 20px;
+}
+
+.bloque-empresa-cc .form-label {
+  font-weight: 500;
+}
+
+.bloque-empresa-cc select,
+.bloque-empresa-cc input {
+  width: 100%;
+}
+
+/* Bloque distribución por centro de costo */
+.bloque-distribucion-cc {
+  border: 1px dashed #007866;
+  padding: 15px;
+  margin-top: 15px;
+  background-color: #ffffff;
+  border-radius: 6px;
+  max-width: 95%;
+  margin-left: auto;
+  margin-right: auto;
+}
+
+/* Botón agregar línea de distribución */
+.bloque-distribucion-cc .fila-boton-agregar {
+  display: flex;
+  justify-content: center;
+  /* Centrado horizontal */
+  margin-bottom: 10px;
+}
+
+.fila-boton-agregar button {
+  min-width: 250px;
+  background-color: #007866;
+}
+
+/* Cada fila de distribución */
+.linea-distribucion {
+  margin-bottom: 10px;
+}
+
+/* Total al final del bloque */
+.bloque-distribucion-cc .total-distribucion {
+  font-weight: bold;
+  color: #007866;
+}
+
+/* Botón agregar empresa (alineado a la derecha y con estilo institucional) */
+.boton-agregar-empresa {
+  display: flex;
+  justify-content: flex-end;
+  margin-bottom: 15px;
+}
+
+.boton-agregar-empresa .btn {
+  background-color: #007866;
+  color: #fff;
+  border: none;
+}
+
+.boton-agregar-empresa .btn:hover {
+  background-color: #005f51;
+  color: #fff;
+}
