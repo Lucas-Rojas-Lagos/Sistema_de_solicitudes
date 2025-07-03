@@ -1,0 +1,2885 @@
+/////////////////////////////////////////////////////////////// PARÁMETROS E INICIALIZACIÓN ///////////////////////////////////////////////////////////////
+
+// Variables de sesión y procesos
+const id_usuario        = ZEN_CONNECT.user.id;
+const nombre_usuario    = ZEN_CONNECT.user.nombre;
+const id_proceso_ticket = 3;
+
+// Constantes para consultas REST
+const queryPrioridades                  = 56;
+const queryTipoTrabajo                  = 77;
+const queryTareasPorTipo                = 255;
+const queryCamposTarea                  = 261;
+const queryOpcionesCampo                = 264;
+const queryInsertarCampoTarea           = 268;
+const queryObtenerTicketBeanId          = 269;
+const queryObtenerValoresPadre          = 270;
+const queryEmpresas                     = 273;
+const queryCentrosCostos                = 274;
+const queryInsertarDistribucion         = 283;
+const queryObtenerValoresDistribucion   = 284;
+const queryAutorizadorPorSolicitante    = 289;
+const restCrearApadrinamiento           = 295;
+const queryNuevaFechaCriticidad         = 302;
+const queryModificarFormaPago           = 305;
+const queryObtenerSocios                = 309;
+const queryObtenerMontosAclaracion      = 312;
+
+// Detección de parámetro padre (caso solicitud aclaración)
+const urlParams = new URLSearchParams(window.location.search);
+const ticketPadre = urlParams.get('s');
+const esAclaracion = ticketPadre !== null;
+
+// Inicialización general
+document.addEventListener("DOMContentLoaded", async function () {
+    fetchTiposTickets();
+    document.getElementById('id_tipo_trabajo').addEventListener('change', async function () {
+        const tipoTicketId = this.value;
+        if (!tipoTicketId) {
+            document.getElementById('contenedorTareas').innerHTML = '';
+            return;
+        }
+        await cargarTareasPorTipo(tipoTicketId);
+        window.listaCCSolicitud = [];
+        actualizarSelectoresCC();
+    });
+    if (esAclaracion && ticketPadre) {
+        cargarDatosTicketPadre(ticketPadre);
+        await cargarMontoAclarado(ticketPadre);
+        window.listaCCSolicitud = [];
+        actualizarSelectoresCC();
+    }
+    if (esAclaracion && ticketPadre) {
+        try {
+            const resp = await ZEN_QUERY({ id: 313, parametros: { id_ticket: ticketPadre } });
+            if (resp.result && Array.isArray(resp.result)) {
+
+                window.datosTicketEditado = resp.result;
+                console.log('[AC] Modelo ticket padre ? window.datosTicketEditado:', window.datosTicketEditado);
+
+                await esperarRenderCompletoDePlantillas();
+                await precargarValoresEditados();
+                await preCargarDistribucionDesdeEdicion();
+                //await preCargarAdjuntosDesdeEdicion();
+                preCargarMetodoPagoDesdeEdicion();
+
+                console.log('[AC] Precarga lista');
+            }
+        } catch (e) {
+            console.error('[AC] Error precargando modelo padre', e);
+            Swal.fire({
+                icon: 'error',
+                title: 'Error',
+                text: 'No se pudieron cargar los datos del modelo para la aclaración.'
+            });
+        }
+    }
+});
+
+// Inicialización del editor de texto (TinyMCE)
+tinymce.init({
+    selector: '#descripcion',
+    plugins: 'advlist autolink lists link image charmap print preview anchor searchreplace visualblocks code fullscreen insertdatetime media table paste code help wordcount',
+    toolbar: 'undo redo | formatselect | bold italic backcolor | alignleft aligncenter alignright alignjustify | bullist numlist outdent indent | removeformat | help | link image media table | forecolor backcolor | charmap emoticons | print preview fullscreen | insertdatetime',
+    image_title: true,
+    automatic_uploads: true,
+    file_picker_types: 'image media file',
+    file_picker_callback: function (cb, value, meta) {
+        var input = document.createElement('input');
+        input.setAttribute('type', 'file');
+        input.setAttribute('accept', 'image/*');
+        input.onchange = function () {
+            var file = this.files[0];
+            var reader = new FileReader();
+            reader.onload = function () {
+                var id = 'blobid' + (new Date()).getTime();
+                var blobCache = tinymce.activeEditor.editorUpload.blobCache;
+                var base64 = reader.result.split(',')[1];
+                var blobInfo = blobCache.create(id, file, base64);
+                blobCache.add(blobInfo);
+                var img = new Image();
+                img.src = blobInfo.blobUri();
+                img.onload = function () {
+                    var maxWidth = 1000, maxHeight = 1000;
+                    var width = img.width, height = img.height;
+                    if (width > maxWidth || height > maxHeight) {
+                        if (width > height) {
+                            height *= maxWidth / width;
+                            width = maxWidth;
+                        } else {
+                            width *= maxHeight / height;
+                            height = maxHeight;
+                        }
+                    }
+                    var canvas = document.createElement('canvas');
+                    canvas.width = width;
+                    canvas.height = height;
+                    var ctx = canvas.getContext('2d');
+                    ctx.drawImage(img, 0, 0, width, height);
+                    var resizedImageUri = canvas.toDataURL('image/jpeg', 1.0);
+                    cb(resizedImageUri, { title: file.name });
+                    tinymce.activeEditor.dom.setStyles(tinymce.activeEditor.getContainer(), {
+                        height: Math.max(height, tinymce.activeEditor.getBody().scrollHeight) + 'px'
+                    });
+                };
+            };
+            reader.readAsDataURL(file);
+        };
+        input.click();
+    },
+    setup: function (editor) {
+        editor.on('NodeChange', function (e) {
+            if (e && e.element.nodeName.toLowerCase() === 'img') {
+                var img = e.element;
+                img.setAttribute('width', img.clientWidth);
+                img.setAttribute('height', img.clientHeight);
+                tinymce.activeEditor.dom.setStyles(tinymce.activeEditor.getContainer(), {
+                    height: Math.max(img.clientHeight, tinymce.activeEditor.getBody().scrollHeight) + 'px'
+                });
+            }
+        });
+        editor.on('change', function () {
+            editor.save();
+        });
+        editor.on('blur', function () {
+            editor.save();
+        });
+    },
+    branding: false,
+    language: 'es'
+});
+
+/////////////////////////////////////////////////////////////// PARÁMETROS E INICIALIZACIÓN ///////////////////////////////////////////////////////////////
+
+
+/////////////////////////////////////////////////////////////// CREAR TICKET ///////////////////////////////////////////////////////////////
+
+function buildDataTicket(id_agente = 0, id_aprobador = 0) {
+    return [
+        { name: "fecha_creacion", value: getChileTime() },
+        { name: "motivo", value: getFieldValue('motivo', '') },
+        { name: "descripcion", value: getFieldValue('descripcion', '') },
+        { name: "originador", value: nombre_usuario },
+        { name: "sentimiento", value: '' },
+        { name: "prioridad", value: 0 },
+        { name: "etiquetas", value: '' },
+        { name: "id_detalle_planificacion", value: 0 },
+        { name: "id_agente", value: id_agente },
+        { name: "id_usuario_originador", value: id_usuario },
+        { name: "id_contacto", value: 0 },
+        { name: "id_tipo_trabajo", value: esAclaracion ? 33 : getFieldValue('id_tipo_trabajo', 0) },
+        { name: "requiere_firma", value: 0 }        
+    ];
+}
+
+// Evento para crear ticket
+document.getElementById('crearTicket').addEventListener('click', async function (event) {
+    tinymce.triggerSave();
+
+    // Paso 1: Validación básica
+    let motivo = getFieldValue('motivo', '');
+    let descripcion = getFieldValue('descripcion', '');
+    if (!motivo.trim() || !descripcion.trim()) {
+        Swal.fire({ icon: 'error', title: 'Campos requeridos', text: 'Los campos motivo y descripción son requeridos.' });
+        return;
+    }
+
+    // Paso 2: Validar campos personalizados antes de crear
+    const camposValidos = await validarCamposPersonalizadosPrevio();
+    if (!camposValidos) return;
+
+    // Paso 3: Validar distribuciones, asociaciones y archivos
+    if (!validarDistribuciones()) return;
+
+    const ccOk = await validarAsociacionArchivosCC();
+    if (!ccOk) return;
+
+    const archivosOk = await validarArchivosPrevio();
+    if (!archivosOk) return;
+
+    // Paso 4: Obtener autorizador (aplica solo a tipos 31 y 32)
+    const tipoSolicitud = parseInt(document.getElementById('id_tipo_trabajo')?.value || '0');
+
+    let idUsuarioAgente = 0;
+    let idUsuarioAprobador = 0;
+
+    if ([31, 32].includes(tipoSolicitud)) {
+        try {
+            const respAut = await ZEN_QUERY({
+                id: queryAutorizadorPorSolicitante,
+                parametros: { id_usuario_originador: id_usuario }
+            });
+
+            if (respAut.result && respAut.result.length > 0) {
+                idUsuarioAgente    = respAut.result[0].id_usuario_autorizador;
+                idUsuarioAprobador = respAut.result[0].id_usuario_autorizador;
+            } else {
+                Swal.fire({
+                    icon: 'warning',
+                    title: 'Autorizador no definido',
+                    text: 'No se ha definido autorizador para este usuario. La solicitud deberá ser aprobada por un administrador.',
+                    timer: 4000,
+                    timerProgressBar: true
+                });
+            }
+        } catch (error) {
+            console.error('[Autorizador] Error al consultar:', error);
+            Swal.fire({
+                icon: 'warning',
+                title: 'Error al consultar autorizador',
+                text: 'No posee autorizador asignado. Su solicitud deberá ser revisada por un administrador.',
+                timer: 4000,
+                timerProgressBar: true
+            });
+        }
+    }
+
+    // Paso 5: Crear ticket (solo si todo lo anterior fue exitoso)
+    const data = buildDataTicket(idUsuarioAgente, idUsuarioAprobador);
+    try {
+        const result = await ZEN_CASE_CREATESAVE(id_proceso_ticket, data);
+        if (result.save === true) {
+            const instanciaID = result.id;
+            await enviarAdjuntos(instanciaID);
+            const respBean = await ZEN_QUERY({ id: queryObtenerTicketBeanId, parametros: { id: instanciaID } });
+            if (respBean.result && respBean.result.length > 0) {
+                const realTicketID = respBean.result[0].bean_id;
+                const success = await guardarCamposTicket(realTicketID);
+                if (success) {
+                    if (esAclaracion && ticketPadre) {
+                        try {
+                            const respApadrinar = await ZEN_QUERY({
+                                id: restCrearApadrinamiento,
+                                parametros: {
+                                    id_ticket_principal: parseInt(ticketPadre),
+                                    id_ticket_apadrinado: realTicketID,
+                                    estado: 1
+                                }
+                            });
+                        } catch (error) {
+                            Swal.fire({
+                                icon: 'error',
+                                title: 'Error',
+                                text: 'No se pudo registrar el vínculo con la solicitud original.'
+                            });
+                            return;
+                        }
+                    }
+
+                    window.location.href = 'https://zenflow.cl/' + workspaceName + '/station/instance/' + instanciaID;
+                } else {
+                    Swal.fire({ icon: 'error', title: 'Error', text: 'No se pudieron guardar los campos del ticket.' });
+                }
+            } else {
+                Swal.fire({ icon: 'error', title: 'Error', text: 'No se pudo obtener el ID real del ticket.' });
+            }
+        } else {
+            Swal.fire({ icon: 'error', title: 'Error', text: 'No fue posible crear el ticket.' });
+        }
+    } catch (err) {
+        Swal.fire({ icon: 'error', title: 'Error', text: 'Error inesperado al crear el ticket.' });
+    }
+});
+
+/////////////////////////////////////////////////////////////// CREAR TICKET ///////////////////////////////////////////////////////////////
+
+
+/////////////////////////////////////////////////////////////// MANEJO DE ADJUNTOS ///////////////////////////////////////////////////////////////
+
+document.getElementById('adjuntarArchivo').addEventListener('click', () => document.getElementById('fileInput').click());
+document.getElementById('fileInput').addEventListener('change', handleFileSelect);
+let adjuntos = [];
+
+function handleFileSelect(event) {
+    const file = event.target.files[0];
+    if (file) {
+        const reader = new FileReader();
+        reader.onload = (e) => {
+            const adjunto = {
+                name: file.name,
+                size: file.size,
+                content: e.target.result.split(',')[1],
+                file: file
+            };
+            adjuntos.push(adjunto);
+            insertArchivo(adjunto.name, adjunto.size);
+        };
+        reader.readAsDataURL(file);
+    }
+}
+
+function insertArchivo(fileName, fileSize) {
+    const containerAdjuntos = document.getElementById('containerAdjuntos');
+    const div = document.createElement('div');
+    div.className = 'adjunto';
+    div.style.display = 'flex';
+    div.style.alignItems = 'center';
+    div.style.margin = '10px 0';
+
+    const removeBtn = document.createElement('span');
+    const removeIcon = document.createElement('i');
+    removeIcon.className = 'fa fa-trash';
+    removeIcon.style.cursor = 'pointer';
+    removeIcon.style.marginRight = '10px';
+    removeIcon.addEventListener('click', () => {
+        div.remove();
+        adjuntos = adjuntos.filter(ad => ad.name !== fileName);
+        actualizarNumeroAdjuntos();
+    });
+    removeBtn.appendChild(removeIcon);
+
+    const nameSpan = document.createElement('span');
+    nameSpan.textContent = `${fileName} (${(fileSize / 1024).toFixed(2)} KB)`;
+    nameSpan.style.marginRight = '10px';
+
+    div.appendChild(removeBtn);
+    div.appendChild(nameSpan);
+    containerAdjuntos.appendChild(div);
+
+    actualizarNumeroAdjuntos();
+}
+
+function actualizarNumeroAdjuntos() {
+    const containerAdjuntos = document.getElementById('containerAdjuntos');
+    const labelNumeroAdjuntos = document.getElementById('labelNumeroAdjuntos');
+    const numAdjuntos = containerAdjuntos.querySelectorAll('.adjunto').length;
+    if (labelNumeroAdjuntos) {
+        labelNumeroAdjuntos.textContent = `Adjuntos subidos: ${numAdjuntos}`;
+        labelNumeroAdjuntos.style.display = numAdjuntos > 0 ? 'block' : 'none';
+    }
+}
+
+async function enviarAdjuntos(mensaje_id) {
+    const promises = adjuntos.map(adjunto => {
+        let formData = new FormData();
+        formData.append("Filedata", adjunto.file, adjunto.name);
+        formData.append("mensaje_id", mensaje_id);
+        return $.ajax({
+            url: BASE_URL + 'api/attach_m_modal',
+            data: formData,
+            cache: false,
+            contentType: false,
+            processData: false,
+            method: 'POST',
+            type: 'POST',
+        });
+    });
+    await Promise.all(promises);
+}
+
+async function uploadFile(file) {
+    const formData = new FormData();
+    formData.append('Filedata', file);
+
+    try {
+        const response = await fetch('/api/createrecurso', {
+            method: 'POST',
+            body: formData
+        });
+
+        if (!response.ok) {
+            throw new Error('Error al subir el archivo');
+        }
+
+        const data = await response.json();
+        return data.data[0].url; // Retornar la URL del archivo subido
+    } catch (error) {
+        Swal.fire({
+            icon: 'error',
+            title: 'Error',
+            text: 'Error al subir el archivo.'
+        });
+        return ''; // Retornar una cadena vacía en caso de error
+    }
+}
+
+/////////////////////////////////////////////////////////////// MANEJO DE ADJUNTOS ///////////////////////////////////////////////////////////////
+
+
+/////////////////////////////////////////////////////////////// FUNCIONES AUXILIARES ///////////////////////////////////////////////////////////////
+
+function getFieldValue(id, defaultValue = '') {
+    const element = document.getElementById(id);
+    if (element) {
+        if (element.tagName === 'INPUT' || element.tagName === 'TEXTAREA') {
+            return element.value || defaultValue;
+        }
+        if (element.tagName === 'SELECT') {
+            return parseInt(element.value) || defaultValue;
+        }
+    }
+    return defaultValue;
+}
+
+function getCurrentFormattedDate() {
+    const now = new Date();
+    const year = now.getFullYear();
+    const month = String(now.getMonth() + 1).padStart(2, '0');
+    const day = String(now.getDate()).padStart(2, '0');
+    const hours = String(now.getHours()).padStart(2, '0');
+    const minutes = String(now.getMinutes()).padStart(2, '0');
+    const seconds = String(now.getSeconds()).padStart(2, '0');
+    return `${year}-${month}-${day} ${hours}:${minutes}:${seconds}`;
+}
+
+function esperarRenderCompletoDePlantillas() {
+    return new Promise(resolve => {
+        const check = () => {
+            const ready = document.querySelector('#contenedorTareas .bloque-tarea');
+            if (ready) { resolve(); } else { setTimeout(check, 120); }
+        };
+        check();
+    });
+}
+
+function habilitarBusquedaSelect(sel, placeholder = '-- Seleccione --') {
+    if (!window.jQuery || !jQuery.fn.select2) {
+        console.warn('Select2 no está disponible.');
+        return;
+    }
+
+    const $sel = $(sel);
+
+    if ($sel.hasClass('select2-hidden-accessible')) {
+        $sel.select2('destroy');
+    }
+
+    $sel.select2({
+        placeholder,
+        width: '100%',
+        allowClear: true,
+        dropdownParent: $sel.parent()
+    });
+
+    $sel.on('select2:select select2:unselect', () => {
+        sel.dispatchEvent(new Event('change', { bubbles: true }));
+    });
+}
+
+
+/////////////////////////////////////////////////////////////// FUNCIONES AUXILIARES ///////////////////////////////////////////////////////////////
+
+
+/////////////////////////////////////////////////////////////// RENDERIZADO DE CAMPOS ///////////////////////////////////////////////////////////////
+
+async function fetchTiposTickets() {
+    try {
+        const resp = await ZEN_QUERY({ id: queryTipoTrabajo, parametros: {} });
+        const tipos = Array.isArray(resp.result) ? resp.result : [];
+        const selectTipo = document.getElementById('id_tipo_trabajo');
+        selectTipo.innerHTML = '<option value="">-- Seleccione tipo de solicitud --</option>';
+        tipos.forEach(tipo => {
+            if (!esAclaracion && parseInt(tipo.id) === 33) return;
+
+            const option = document.createElement('option');
+            option.value = tipo.id;
+            option.textContent = tipo.nombre;
+            selectTipo.appendChild(option);
+        });
+
+        if (esAclaracion) {
+            selectTipo.value = 33;
+            selectTipo.setAttribute('disabled', 'disabled');
+
+            const inputMotivo = document.getElementById('motivo');
+            if (inputMotivo) {
+                inputMotivo.setAttribute('readonly', 'readonly');
+                inputMotivo.value = `Aclaración: Solicitud N° ${ticketPadre}`;
+            }
+
+            await cargarTareasPorTipo(33);
+            await cargarDatosTicketPadre(ticketPadre);
+            // Autocompletar campo de referencia en solicitudes tipo aclaración
+            setTimeout(() => {
+                const wrapperReferencia = document.querySelector('.campo-personalizado[data-nombre-interno="referencia_solicitud"]');
+                if (wrapperReferencia) {
+                    const inputRef = wrapperReferencia.querySelector('input, textarea');
+                    if (inputRef) {
+                        inputRef.value = `Solicitud N° ${ticketPadre}`;
+                        inputRef.setAttribute('readonly', 'readonly');
+                    }
+                }
+            }, 500);
+
+        }
+    } catch (error) {
+        Swal.fire({
+            icon: 'error',
+            title: 'Error',
+            text: 'No se pudo cargar el listado de tipos de solicitud.'
+        });
+    }
+}
+
+async function cargarTareasPorTipo(tipoTicketId) {
+    const contenedor = document.getElementById('contenedorTareas');
+    contenedor.innerHTML = '';
+
+    try {
+        const respTareas = await ZEN_QUERY({ id: queryTareasPorTipo, parametros: { id_tipo_ticket: tipoTicketId } });
+        const tareas = Array.isArray(respTareas.result) ? respTareas.result : [];
+
+        for (let tarea of tareas) {
+            const bloqueTarea = document.createElement('div');
+            bloqueTarea.classList.add('bloque-tarea');
+            bloqueTarea.style.border = '1px solid #ccc';
+            bloqueTarea.style.margin = '10px 0';
+            bloqueTarea.style.padding = '10px';
+            bloqueTarea.setAttribute('data-plantilla-id', tarea.id);
+            bloqueTarea.setAttribute('data-motivo-plantilla', tarea.motivo_plantilla || '');
+            bloqueTarea.setAttribute('data-descripcion-plantilla', tarea.descripcion_plantilla || '');
+
+            const titulo = document.createElement('h5');
+            titulo.innerText = tarea.motivo_plantilla;
+            bloqueTarea.appendChild(titulo);
+
+            const desc = document.createElement('p');
+            desc.innerText = tarea.descripcion_plantilla ?? '';
+            bloqueTarea.appendChild(desc);
+
+            // Bloque múltiple: Empresas y CC
+            const wrapper = document.createElement('div');
+            wrapper.classList.add('wrapper-multi-empresas');
+
+            const tituloBloque = document.createElement('h6');
+            tituloBloque.textContent = '';
+            wrapper.appendChild(tituloBloque);
+
+            /*
+            const btnAgregar = document.createElement('button');
+            btnAgregar.type = 'button';
+            btnAgregar.className = 'btn btn-sm btn-outline-primary mb-2';
+            btnAgregar.textContent = '+ Agregar empresa';
+            btnAgregar.addEventListener('click', () => insertarBloqueEmpresa(wrapper));
+            wrapper.appendChild(btnAgregar); 
+            */
+
+            const filaBtnAgregar = document.createElement('div');
+            filaBtnAgregar.className = 'boton-agregar-empresa';
+
+            const btnAgregar = document.createElement('button');
+            btnAgregar.type = 'button';
+            btnAgregar.className = 'btn btn-sm';
+            btnAgregar.textContent = '+ Agregar empresa';
+            btnAgregar.addEventListener('click', () => insertarBloqueEmpresa(wrapper));
+
+            filaBtnAgregar.appendChild(btnAgregar);
+            wrapper.appendChild(filaBtnAgregar);
+
+
+            const subContenedor = document.createElement('div');
+            subContenedor.id = 'contenedorEmpresas';
+            wrapper.appendChild(subContenedor);
+
+            bloqueTarea.appendChild(wrapper);
+
+            // Agrega el primer bloque por defecto
+            insertarBloqueEmpresa(wrapper);
+
+            // Contenedor de campos personalizados
+            const contenedorCampos = document.createElement('div');
+            contenedorCampos.id = `contenedorCampos_tarea_${tarea.id}`;
+            bloqueTarea.appendChild(contenedorCampos);
+
+            contenedor.appendChild(bloqueTarea);
+
+            await cargarCamposTarea(tarea.id, contenedorCampos.id);
+
+            // Eliminar campos individuales si existen
+            const campoEmpresa = bloqueTarea.querySelector('.campo-personalizado[data-nombre-interno="empresa_paga"]');
+            const campoCentroCosto = bloqueTarea.querySelector('.campo-personalizado[data-nombre-interno="centro_costo"]');
+            if (campoEmpresa) campoEmpresa.remove();
+            if (campoCentroCosto) campoCentroCosto.remove();
+        }
+
+    } catch (error) {
+        Swal.fire({
+            icon: 'error',
+            title: 'Error',
+            text: 'No se pudieron cargar las tareas del tipo seleccionado.'
+        });
+    }
+}
+
+async function cargarCamposTarea(idTareaPlantilla, contenedorCamposId) {
+    try {
+        const respCampos = await ZEN_QUERY({ id: queryCamposTarea, parametros: { id_plantilla_tarea: idTareaPlantilla } });
+        const campos = Array.isArray(respCampos.result) ? respCampos.result : [];
+        window.camposPlantillaActual = campos;
+        window.camposYaRenderizados = {};
+
+        for (let campo of campos) {
+            await renderCampoFormulario(campo, contenedorCamposId);
+        }
+    } catch (error) {
+        Swal.fire({
+            icon: 'error',
+            title: 'Error',
+            text: 'No se pudieron cargar los campos de la plantilla.'
+        });
+    }
+}
+
+async function renderCampoFormulario(campo, contenedorId, forcedWrapper = null) {
+
+    if (!window.camposYaRenderizados) window.camposYaRenderizados = {};
+    const camposBloqueados = ['empresa_paga', 'centro_costo'];
+    if (camposBloqueados.includes(campo.nombre_interno)) return;
+
+    // Control total de render de documento_adjunto
+    if (campo.nombre_interno === 'documento_adjunto') {
+        const tieneSelectorTipo = window.camposPlantillaActual?.some(c =>
+            c.id_plantilla_tarea === campo.id_plantilla_tarea &&
+            c.nombre_interno === 'tipo_documento'
+        );
+
+        if (tieneSelectorTipo) {
+            if (window.camposYaRenderizados?.[`combo_adjuntos_${campo.id_plantilla_tarea}`]) {
+                return;
+            }
+            const campoTipo = window.camposPlantillaActual?.find(c =>
+                c.id_plantilla_tarea === campo.id_plantilla_tarea &&
+                c.nombre_interno === 'tipo_documento'
+            );
+            if (campoTipo) {
+                await renderBloqueAdjuntosDinamico(campoTipo, campo, contenedorId);
+                window.camposYaRenderizados[`combo_adjuntos_${campo.id_plantilla_tarea}`] = true;
+                return;
+            }
+        } else {
+            const contenedor = document.getElementById(contenedorId);
+            await renderBloqueArchivosSimples(campo, contenedor);
+            return;
+        }
+    }
+
+    const contenedor = document.getElementById(contenedorId);
+    if (!contenedor) return;
+    const uniqueSuffix = `_${campo.id}_${Date.now()}`;
+    let wrapper = forcedWrapper || document.createElement('div');
+    wrapper.classList.add('campo-personalizado');
+    wrapper.style.marginBottom = '8px';
+    wrapper.setAttribute('data-campo-id', campo.id);
+    if (campo.nombre_interno) {
+        wrapper.setAttribute('data-nombre-interno', campo.nombre_interno);
+    }
+    wrapper.setAttribute('data-obligatorio', parseInt(campo.obligatorio) === 1 ? '1' : '0');
+    wrapper.setAttribute('data-campo-dependiente-de', campo.id_campo_padre || 0);
+    const esObligatorio = parseInt(campo.obligatorio) === 1;
+    let labelHTML = `<label>${campo.label || 'Campo'}${esObligatorio ? '<span style="color:red">*</span>' : ''}</label>`;
+    const valorPorDefecto = campo.valor_por_defecto || '';
+    const tipoCampo = (campo.tipo_componente || '').toLowerCase();
+    const nombreInterno = campo.nombre_interno || '';
+    const esCampoMonto = ['monto_pagar', 'monto_aclarar'].includes(nombreInterno);
+
+    if (esCampoMonto) {
+        window.camposMontoDistribucion = window.camposMontoDistribucion || {};
+        const plantillaId = campo.id_plantilla_tarea;
+        window.camposMontoDistribucion[plantillaId] = {
+            campoId: campo.id,
+            inputId: `campo_${campo.id}${uniqueSuffix}`,
+            wrapper: wrapper,
+            suffix: uniqueSuffix
+        };
+    }
+
+    const origenDatos = (campo.origen_datos || '').trim();
+    let fieldHTML = '';
+
+    if (campo.nombre_interno === 'tipo_documento') {
+        const campoAdjunto = window.camposPlantillaActual?.find(c => 
+            c.id_plantilla_tarea === campo.id_plantilla_tarea &&
+            c.nombre_interno === 'documento_adjunto'
+        );
+        if (campoAdjunto) {
+            await renderBloqueAdjuntosDinamico(campo, campoAdjunto, contenedor);
+            window.camposYaRenderizados[`combo_adjuntos_${campo.id_plantilla_tarea}`] = true;
+            return;
+        }
+    }
+
+    if (campo.nombre_interno === 'nombre_socio_negocio') {
+        const contenedor = document.getElementById(contenedorId);
+        if (!contenedor) return;
+
+        // Crea el wrapper
+        const wrapper = forcedWrapper || document.createElement('div');
+        wrapper.classList.add('campo-personalizado');
+        wrapper.style.marginBottom = '8px';
+        wrapper.setAttribute('data-campo-id', campo.id);
+        wrapper.setAttribute('data-nombre-interno', campo.nombre_interno);
+        wrapper.setAttribute('data-obligatorio', parseInt(campo.obligatorio) === 1 ? '1' : '0');
+
+        const label = document.createElement('label');
+        label.innerHTML = `${campo.label || 'Socio de negocios'} ${parseInt(campo.obligatorio) === 1 ? '<span style="color:red">*</span>' : ''}`;
+        wrapper.appendChild(label);
+
+        // Select personalizado
+        const select = document.createElement('select');
+        select.className = 'form-control form-control-sm';
+        select.setAttribute('name', `campo_${campo.id}`);
+        if (parseInt(campo.obligatorio) === 1) {
+            select.setAttribute('required', 'required');
+        }
+
+        const optionDefault = document.createElement('option');
+        optionDefault.value = '';
+        optionDefault.textContent = '-- Seleccione socio --';
+        select.appendChild(optionDefault);
+
+        wrapper.appendChild(select);
+        if (!forcedWrapper) contenedor.appendChild(wrapper);
+
+        const resp = await ZEN_QUERY({ id: queryObtenerSocios, parametros: {} });
+        const socios = Array.isArray(resp.result) ? resp.result : [];
+
+        let valorPrecargado = '';
+        if (Array.isArray(window.datosTicketEditado)) {
+            const datoPrecargado = window.datosTicketEditado.find(d => 
+                d.tipo === 'campo_personalizado' && d.nombre_interno === 'nombre_socio_negocio'
+            );
+            if (datoPrecargado) {
+                valorPrecargado = datoPrecargado.valor || '';
+            }
+        }
+
+        socios.forEach(socio => {
+            const option = document.createElement('option');
+            option.value = socio.nombre;
+            option.textContent = `${socio.nombre} <${socio.nombre_empresa}>`;
+            option.dataset.rut = socio.identificador;
+            option.dataset.banco = socio.banco;
+            option.dataset.cta = socio.cta_corriente;
+
+            // Seleccionar si coincide con valor precargado
+            if (valorPrecargado && valorPrecargado === socio.nombre) {
+                option.selected = true;
+                setTimeout(() => {
+                    const wrapperRut = document.querySelector('.campo-personalizado[data-nombre-interno="rut_socio_negocio"]');
+                    if (wrapperRut) {
+                        const inputRut = wrapperRut.querySelector('input');
+                        if (inputRut) {
+                            inputRut.value = socio.identificador;
+                            inputRut.setAttribute('readonly', true);
+                        }
+                    }
+
+                    const wrapperBanco = document.querySelector('.campo-personalizado[data-nombre-interno="banco_socio_negocio"]');
+                    if (wrapperBanco) {
+                    const inputBanco = wrapperBanco.querySelector('input');
+                    if (inputBanco) {
+                        inputBanco.value = socio.banco;
+                        inputBanco.setAttribute('readonly', true);
+                    }
+                    }
+
+                    const wrapperCuenta = document.querySelector('.campo-personalizado[data-nombre-interno="cuenta_corriente"]');
+                    if (wrapperCuenta) {
+                        const inputCuenta = wrapperCuenta.querySelector('input');
+                        if (inputCuenta) {
+                            inputCuenta.value = socio.cta_corriente;
+                            inputCuenta.setAttribute('readonly', true);
+                        }
+                    }
+                }, 100);
+            }
+
+            select.appendChild(option);
+        });
+
+        habilitarBusquedaSelect(select, '-- Seleccione socio --');
+
+
+        // Evento para autocompletar rut y cuenta corriente
+        select.addEventListener('change', () => {
+            const selected = select.options[select.selectedIndex];
+            const rut = selected?.dataset.rut || '';
+            const cuenta = selected?.dataset.cta || '';
+            const banco = selected?.dataset.banco || '';
+
+            const wrapperRut = document.querySelector('.campo-personalizado[data-nombre-interno="rut_socio_negocio"]');
+            if (wrapperRut) {
+                const inputRut = wrapperRut.querySelector('input');
+                if (inputRut) {
+                    inputRut.value = rut;
+                    inputRut.setAttribute('readonly', true);
+                }
+            }
+
+            const wrapperBanco = document.querySelector('.campo-personalizado[data-nombre-interno="banco_socio_negocio"]');
+            if (wrapperBanco) {
+            const inputBanco = wrapperBanco.querySelector('input');
+            if (inputBanco) {
+                inputBanco.value = banco;
+                inputBanco.setAttribute('readonly', true);
+            }
+            }
+
+            const wrapperCuenta = document.querySelector('.campo-personalizado[data-nombre-interno="cuenta_corriente"]');
+            if (wrapperCuenta) {
+                const inputCuenta = wrapperCuenta.querySelector('input');
+                if (inputCuenta) {
+                    inputCuenta.value = cuenta;
+                    inputCuenta.setAttribute('readonly', true);
+                }
+            }
+        });
+
+        return; // ya renderizado, salimos
+    }
+
+    if (['select', 'radio', 'checkbox'].includes(tipoCampo) && origenDatos) {
+        const padreId = parseInt(campo.id_campo_padre || 0);
+        if (padreId > 0) {
+            const padreWrapper = contenedor.querySelector(`.campo-personalizado[data-campo-id="${padreId}"]`);
+            if (!padreWrapper) {
+                fieldHTML = `<select class="form-control form-control-sm" disabled>
+                  <option value="">(No se encontró el campo padre ID=${padreId} aún)</option>
+                </select>`;
+                wrapper.innerHTML = labelHTML + fieldHTML;
+                if (!forcedWrapper) contenedor.appendChild(wrapper);
+                return;
+            }
+            const valorPadre = obtenerValorCampoPadre(padreWrapper);
+            if (!valorPadre) {
+                fieldHTML = `<select class="form-control form-control-sm" disabled>
+                  <option value="">-- Seleccione primero una empresa --</option>
+                </select>`;
+                wrapper.innerHTML = labelHTML + fieldHTML;
+                if (!forcedWrapper) contenedor.appendChild(wrapper);
+                vincularEventoCambioPadre(padreWrapper, campo, wrapper);
+                return;
+            }
+            let restId = 0;
+            if (origenDatos === 'empresas') restId = queryEmpresas;
+            if (origenDatos === 'catalogo_centros_costos') restId = queryCentrosCostos;
+            if (restId > 0) {
+                const respData = await ZEN_QUERY({
+                    id: restId,
+                    parametros: { valor_padre: valorPadre }
+                });
+                let listaDin = Array.isArray(respData.result) ? respData.result : [];
+                if (origenDatos === 'catalogo_centros_costos') {
+                    listaDin.unshift({ valor_opcion: '__DISTRIBUCION_CC__', etiqueta_opcion: 'Distribución por CC' });
+                    window.listaCC = listaDin.filter(cc => cc.valor_opcion !== '__DISTRIBUCION_CC__');
+                }
+                fieldHTML = generarHTMLCampoDinamico(tipoCampo, campo.id, listaDin, valorPorDefecto, esObligatorio, uniqueSuffix);
+                if (origenDatos === 'catalogo_centros_costos' && tipoCampo === 'select') {
+                    const distribId = `bloqueDistribucion_${campo.id}${uniqueSuffix}`;
+                    fieldHTML += 
+                        `<div id="${distribId}" class="bloque-distribucion-cc" style="margin-top:10px; border:1px dashed #007866; padding:10px; display:none;">
+                            <button type="button" class="btn btn-sm btn-outline-info mb-2" id="btnAgregarLinea_${campo.id}${uniqueSuffix}">+ Agregar CC</button>
+                            <div id="tablaDistribucion_${campo.id}${uniqueSuffix}"></div>
+                            <div style="margin-top:8px;"><strong>Total: <span id="totalDistribucion_${campo.id}${uniqueSuffix}">$ 0</span></strong></div>
+                        </div>`;
+                }
+            } else {
+                fieldHTML = `<p style="color:red;font-size:13px;">(origen_datos="${origenDatos}" no soportado en anidado)</p>`;
+            }
+            wrapper.innerHTML = labelHTML + fieldHTML;
+            if (!forcedWrapper) contenedor.appendChild(wrapper);
+            vincularEventoCambioPadre(padreWrapper, campo, wrapper);
+            if (origenDatos === 'catalogo_centros_costos' && tipoCampo === 'select') {
+                setTimeout(() => {
+                    const selectorCC = wrapper.querySelector(`#campo_${campo.id}${uniqueSuffix}`);
+                    const bloque = document.getElementById(`bloqueDistribucion_${campo.id}${uniqueSuffix}`);
+                    if (!selectorCC || !bloque) return;
+                    selectorCC.addEventListener('change', () => {
+                        if (selectorCC.value === '__DISTRIBUCION_CC__') {
+                            bloque.style.setProperty('display', 'block', 'important');
+                        } else {
+                            bloque.style.display = 'none';
+                            document.getElementById(`tablaDistribucion_${campo.id}${uniqueSuffix}`).innerHTML = '';
+                            document.getElementById(`totalDistribucion_${campo.id}${uniqueSuffix}`).innerText = '$ 0';
+                            if (window.camposMontoDistribucion && window.camposMontoDistribucion[campo.id_plantilla_tarea]) {
+                                const inputId = window.camposMontoDistribucion[campo.id_plantilla_tarea].inputId;
+                                const campoMonto = document.getElementById(inputId);
+                                if (campoMonto) {
+                                    campoMonto.removeAttribute('readonly');
+                                }
+                            }
+                        }
+                    });
+                    if (valorPorDefecto === '__DISTRIBUCION_CC__') {
+                        bloque.style.setProperty('display', 'block', 'important');
+                    }
+                    const btnAgregar = wrapper.querySelector(`#btnAgregarLinea_${campo.id}${uniqueSuffix}`);
+                    btnAgregar.addEventListener('click', () => {
+                        const tabla = document.getElementById(`tablaDistribucion_${campo.id}${uniqueSuffix}`);
+                        const totalSpan = document.getElementById(`totalDistribucion_${campo.id}${uniqueSuffix}`);
+                        const selectsEnLineas = tabla.querySelectorAll('select.sel-cc-linea');
+                        const seleccionados = Array.from(selectsEnLineas).map(sel => sel.value);
+                        const disponibles = window.listaCC.filter(cc => !seleccionados.includes(cc.valor_opcion));
+
+                        if (disponibles.length === 0) {
+                            Swal.fire('Aviso', 'No hay más centros de costo disponibles para distribuir.', 'warning');
+                            return;
+                        }
+
+                        const nuevaLinea = document.createElement('div');
+                        nuevaLinea.className = 'linea-distribucion row mb-2';
+                        nuevaLinea.innerHTML = 
+                            `<div class="col-md-7">
+                                <select class="form-control form-control-sm sel-cc-linea">
+                                    <option value="">-- Seleccione CC --</option>
+                                    ${disponibles.map(cc => `<option value="${cc.valor_opcion}">${cc.etiqueta_opcion}</option>`).join('')}
+                                </select>
+                            </div>
+                            <div class="col-md-3">
+                                <input type="number" class="form-control form-control-sm input-monto-linea" min="0" value="0" step="any" placeholder="Monto $">
+                            </div>
+                            <div class="col-md-2 text-end">
+                                <button class="btn btn-sm btn-danger btnEliminarLinea"><i class="fa fa-trash"></i></button>
+                            </div>`;
+
+                        tabla.appendChild(nuevaLinea);
+
+                        nuevaLinea.querySelector('.btnEliminarLinea').addEventListener('click', () => {
+                            nuevaLinea.remove();
+                            actualizarOpcionesDistribucion(tabla);
+                            actualizarTotalDistribucionMonto(tabla, totalSpan, campo.id_plantilla_tarea);
+                        });
+
+                        nuevaLinea.querySelectorAll('select, input').forEach(el => {
+                            el.addEventListener('change', () => {
+                                actualizarOpcionesDistribucion(tabla);
+                                actualizarTotalDistribucionMonto(tabla, totalSpan, campo.id_plantilla_tarea);
+                            });
+                        });
+
+                        actualizarOpcionesDistribucion(tabla);
+                        actualizarTotalDistribucionMonto(tabla, totalSpan, campo.id_plantilla_tarea);
+                    });
+                }, 50);
+            }
+        } else {
+            if (origenDatos === 'catalogo_centros_costos' && tipoCampo === 'select') {
+                const respData = await ZEN_QUERY({ id: queryCentrosCostos, parametros: {} });
+                let listaCC = Array.isArray(respData.result) ? respData.result : [];
+                listaCC.unshift({ valor_opcion: '__DISTRIBUCION_CC__', etiqueta_opcion: 'Distribución por CC' });
+                window.listaCC = listaCC.filter(cc => cc.valor_opcion !== '__DISTRIBUCION_CC__');
+                fieldHTML += `<select class="form-control form-control-sm" id="campo_${campo.id}${uniqueSuffix}" name="campo_${campo.id}${uniqueSuffix}" ${esObligatorio ? 'required' : ''}>`;
+                fieldHTML += `<option value="">-- Seleccione --</option>`;
+                listaCC.forEach(cc => {
+                    const selected = (valorPorDefecto === String(cc.valor_opcion)) ? 'selected' : '';
+                    fieldHTML += `<option value="${cc.valor_opcion}" ${selected}>${cc.etiqueta_opcion}</option>`;
+                });
+                fieldHTML += `</select>`;
+                const distribId = `bloqueDistribucion_${campo.id}${uniqueSuffix}`;
+                fieldHTML += 
+                    `<div id="${distribId}" class="bloque-distribucion-cc" style="margin-top:10px; border:1px dashed #007866; padding:10px; display:none;">
+                        <button type="button" class="btn btn-sm btn-outline-info mb-2" id="btnAgregarLinea_${campo.id}${uniqueSuffix}">+ Agregar CC</button>
+                        <div id="tablaDistribucion_${campo.id}${uniqueSuffix}"></div>
+                        <div style="margin-top:8px;"><strong>Total: <span id="totalDistribucion_${campo.id}${uniqueSuffix}">$ 0</span></strong></div>
+                    </div>`;
+                wrapper.innerHTML = labelHTML + fieldHTML;
+                if (!forcedWrapper) contenedor.appendChild(wrapper);
+                setTimeout(() => {
+                    const selectorCC = wrapper.querySelector(`#campo_${campo.id}${uniqueSuffix}`);
+                    const bloque = document.getElementById(distribId);
+                    if (!selectorCC || !bloque) return;
+                    selectorCC.addEventListener('change', () => {
+                        const valor = selectorCC.value;
+                        if (valor === '__DISTRIBUCION_CC__') {
+                            bloque.style.setProperty('display', 'block', 'important');
+                        } else {
+                            bloque.style.display = 'none';
+                            document.getElementById(`tablaDistribucion_${campo.id}${uniqueSuffix}`).innerHTML = '';
+                            document.getElementById(`totalDistribucion_${campo.id}${uniqueSuffix}`).innerText = '$ 0';
+                            if (window.camposMontoDistribucion && window.camposMontoDistribucion[campo.id_plantilla_tarea]) {
+                                const inputId = window.camposMontoDistribucion[campo.id_plantilla_tarea].inputId;
+                                const campoMonto = document.getElementById(inputId);
+                                if (campoMonto) {
+                                    campoMonto.removeAttribute('readonly');
+                                }
+                            }
+                        }
+                    });
+                    if (valorPorDefecto === '__DISTRIBUCION_CC__') {
+                        bloque.style.setProperty('display', 'block', 'important');
+                    }
+                    const btnAgregar = wrapper.querySelector(`#btnAgregarLinea_${campo.id}${uniqueSuffix}`);
+                    btnAgregar.addEventListener('click', () => {
+                        const tabla = document.getElementById(`tablaDistribucion_${campo.id}${uniqueSuffix}`);
+                        const totalSpan = document.getElementById(`totalDistribucion_${campo.id}${uniqueSuffix}`);
+                        const selectsEnLineas = tabla.querySelectorAll('select.sel-cc-linea');
+                        const seleccionados = Array.from(selectsEnLineas).map(sel => sel.value);
+                        const disponibles = window.listaCC.filter(cc => !seleccionados.includes(cc.valor_opcion));
+
+                        if (disponibles.length === 0) {
+                            Swal.fire('Aviso', 'No hay más centros de costo disponibles para distribuir.', 'warning');
+                            return;
+                        }
+
+                        const nuevaLinea = document.createElement('div');
+                        nuevaLinea.className = 'linea-distribucion row mb-2';
+                        nuevaLinea.innerHTML = 
+                            `<div class="col-md-7">
+                                <select class="form-control form-control-sm sel-cc-linea">
+                                    <option value="">-- Seleccione CC --</option>
+                                    ${disponibles.map(cc => `<option value="${cc.valor_opcion}">${cc.etiqueta_opcion}</option>`).join('')}
+                                </select>
+                            </div>
+                            <div class="col-md-3">
+                                <input type="number" class="form-control form-control-sm input-monto-linea" min="0" value="0" step="any" placeholder="Monto $">
+                            </div>
+                            <div class="col-md-2 text-end">
+                                <button class="btn btn-sm btn-danger btnEliminarLinea"><i class="fa fa-trash"></i></button>
+                            </div>`;
+
+                        tabla.appendChild(nuevaLinea);
+
+                        nuevaLinea.querySelector('.btnEliminarLinea').addEventListener('click', () => {
+                            nuevaLinea.remove();
+                            actualizarOpcionesDistribucion(tabla);
+                            actualizarTotalDistribucionMonto(tabla, totalSpan, campo.id_plantilla_tarea);
+                        });
+
+                        nuevaLinea.querySelectorAll('select, input').forEach(el => {
+                            el.addEventListener('change', () => {
+                                actualizarOpcionesDistribucion(tabla);
+                                actualizarTotalDistribucionMonto(tabla, totalSpan, campo.id_plantilla_tarea);
+                            });
+                        });
+
+                        actualizarOpcionesDistribucion(tabla);
+                        actualizarTotalDistribucionMonto(tabla, totalSpan, campo.id_plantilla_tarea);
+                    });
+
+                }, 50);
+            } else {
+                let restId = 0;
+                if (origenDatos === 'empresas') restId = queryEmpresas;
+                if (restId > 0) {
+                    const respData = await ZEN_QUERY({ id: restId, parametros: {} });
+                    const listaDin = Array.isArray(respData.result) ? respData.result : [];
+                    fieldHTML = generarHTMLCampoDinamico(tipoCampo, campo.id, listaDin, valorPorDefecto, esObligatorio, uniqueSuffix);
+                } else {
+                    fieldHTML = `<p style="color:red;font-size:13px;">(origen="${origenDatos}" no soportado)</p>`;
+                }
+                wrapper.innerHTML = labelHTML + fieldHTML;
+                if (!forcedWrapper) contenedor.appendChild(wrapper);
+            }
+        }
+    } else if (['select', 'radio', 'checkbox'].includes(tipoCampo) && !origenDatos) {
+        const opcionesResp = await ZEN_QUERY({ id: queryOpcionesCampo, parametros: { id_plantilla_campo: campo.id } });
+        const opciones = Array.isArray(opcionesResp.result) ? opcionesResp.result : [];
+        fieldHTML = generarHTMLCampoEstatico(tipoCampo, campo.id, opciones, valorPorDefecto, esObligatorio, uniqueSuffix);
+        wrapper.innerHTML = labelHTML + fieldHTML;
+        if (!forcedWrapper) contenedor.appendChild(wrapper);
+    } else {
+        fieldHTML = generarHTMLCampoBasico(tipoCampo, campo.id, valorPorDefecto, esObligatorio, uniqueSuffix);
+        wrapper.innerHTML = labelHTML + fieldHTML;
+        if (!forcedWrapper) contenedor.appendChild(wrapper);
+    }
+
+    if (tipoCampo === 'file') {
+        if (
+            nombreInterno === 'documento_adjunto' &&
+            window.camposPlantillaActual?.some(c =>
+                c.id_plantilla_tarea === campo.id_plantilla_tarea &&
+                c.nombre_interno === 'tipo_documento'
+            )
+        ) {
+            const wrapperId = `wrapperDocumentoAdjunto_${campo.id}${uniqueSuffix}`;
+            fieldHTML = `
+                <div id="${wrapperId}" class="bloque-archivo-dinamico">
+                    <button type="button" class="btn btn-sm btn-outline-info mb-2" id="btnAgregarArchivo_${campo.id}${uniqueSuffix}">+ Agregar documento</button>
+                    <div id="tablaArchivos_${campo.id}${uniqueSuffix}"></div>
+                </div>
+            `;
+            wrapper.innerHTML = labelHTML + fieldHTML;
+            if (!forcedWrapper) contenedor.appendChild(wrapper);
+
+            setTimeout(() => {
+                const tabla = document.getElementById(`tablaArchivos_${campo.id}${uniqueSuffix}`);
+                const btnAgregar = document.getElementById(`btnAgregarArchivo_${campo.id}${uniqueSuffix}`);
+                if (!tabla || !btnAgregar) return;
+                btnAgregar.addEventListener('click', () => {
+                    agregarLineaArchivo(campo.id, tabla);
+                });
+                agregarLineaArchivo(campo.id, tabla);
+            }, 50);
+
+            return;
+        } else {
+            await renderBloqueArchivosSimples(campo, contenedor);
+            window.camposYaRenderizados[`combo_adjuntos_${campo.id_plantilla_tarea}`] = true;
+            return;
+        }
+    }
+}
+
+function actualizarOpcionesDistribucion(tabla) {
+    const selects = tabla.querySelectorAll('select.sel-cc-linea');
+    const seleccionados = Array.from(selects).map(sel => sel.value).filter(val => val !== '');
+    selects.forEach(sel => {
+        const currentVal = sel.value;
+        sel.innerHTML = '<option value="">-- Seleccione CC --</option>';
+        if (window.listaCC && Array.isArray(window.listaCC)) {
+            window.listaCC
+                .filter(cc => (cc.valor_opcion === currentVal) || (!seleccionados.includes(cc.valor_opcion)))
+                .forEach(cc => {
+                    const opt = document.createElement('option');
+                    opt.value = cc.valor_opcion;
+                    opt.textContent = cc.etiqueta_opcion;
+                    if (cc.valor_opcion === currentVal) opt.selected = true;
+                    sel.appendChild(opt);
+                });
+        }
+    });
+}
+
+function actualizarTotalDistribucionMonto(tabla, totalSpan, plantillaId) {
+    const inputs = tabla.querySelectorAll('input.input-monto-linea');
+    let total = 0;
+    inputs.forEach(inp => {
+        total += parseFloat(inp.value || 0);
+    });
+
+    // Actualiza visual
+    totalSpan.innerText = `$${total.toLocaleString('es-CL', { minimumFractionDigits: 0 })}`;
+
+    // Si hay campo monto asociado a esta plantilla, lo actualizamos también
+    if (window.camposMontoDistribucion && window.camposMontoDistribucion[plantillaId]) {
+        const inputId = window.camposMontoDistribucion[plantillaId].inputId;
+        const campoInput = document.getElementById(inputId);
+        if (campoInput) {
+            campoInput.value = total;
+            campoInput.setAttribute('readonly', 'readonly');
+        }
+    }
+}
+
+function actualizarTotalDistribucion(tabla, totalSpan) {
+    const inputs = tabla.querySelectorAll('input.input-monto-linea');
+    let total = 0;
+    inputs.forEach(inp => {
+        total += parseFloat(inp.value || 0);
+    });
+
+    totalSpan.innerText = `$${total.toLocaleString('es-CL')}`;
+    totalSpan.style.color = 'black';
+
+    // Buscar wrapper con nombre_interno = monto_pagar o monto_aclarar
+    const wrapperMonto = document.querySelector(
+        '.campo-personalizado[data-nombre-interno="monto_pagar"], .campo-personalizado[data-nombre-interno="monto_aclarar"]'
+    );
+    
+    if (wrapperMonto) {
+        // Buscar input tipo number con name que comience con "campo_"
+        const inputMonto = wrapperMonto.querySelector('input[type="number"][name^="campo_"]');
+        if (inputMonto) {
+            inputMonto.value = total;
+            inputMonto.setAttribute('readonly', true);
+        }
+    }
+}
+
+function vincularEventoCambioPadre(padreWrapper, campoHijo, wrapperHijo) {
+    const inputsPadre = padreWrapper.querySelectorAll('select, input[type="radio"], input[type="checkbox"], input[type="text"], textarea');
+    inputsPadre.forEach(inp => {
+        inp.addEventListener('change', async () => {
+            const contenedor = wrapperHijo.parentElement;
+            if (!contenedor) return;
+            const nuevoWrapper = document.createElement('div');
+            await renderCampoFormulario(campoHijo, contenedor.id, nuevoWrapper);
+            wrapperHijo.replaceWith(nuevoWrapper);
+        });
+    });
+}
+
+function obtenerValorCampoPadre(padreWrapper) {
+    const sel = padreWrapper.querySelector('select');
+    if (sel) return sel.value || '';
+    const radioSel = padreWrapper.querySelector('input[type="radio"]:checked');
+    if (radioSel) return radioSel.value || '';
+    const chk = padreWrapper.querySelector('input[type="checkbox"]:checked');
+    if (chk) return chk.value || '';
+    const inputEl = padreWrapper.querySelector('input, textarea');
+    if (inputEl) return inputEl.value || '';
+    return '';
+}
+
+function generarHTMLCampoDinamico(tipoCampo, campoId, listaDin, valorPorDefecto, esObligatorio, suffix = '') {
+    let html = '';
+    if (tipoCampo === 'select') {
+        html += `<select id="campo_${campoId}${suffix}" class="form-control form-control-sm" name="campo_${campoId}${suffix}" ${esObligatorio ? 'required' : ''}>`;
+        html += `<option value="">-- Seleccione --</option>`;
+        listaDin.forEach(item => {
+            const selected = (valorPorDefecto === String(item.valor_opcion)) ? 'selected' : '';
+            html += `<option value="${item.valor_opcion}" ${selected}>${item.etiqueta_opcion}</option>`;
+        });
+        html += `</select>`;
+        if (listaDin.some(item => item.valor_opcion === '__DISTRIBUCION_CC__')) {
+            const distribId = `bloqueDistribucion_${campoId}${suffix}`;
+            const tablaId = `tablaDistribucion_${campoId}${suffix}`;
+            const totalId = `totalDistribucion_${campoId}${suffix}`;
+            const btnId = `btnAgregarLinea_${campoId}${suffix}`;
+            
+            html += `
+            <div id="${distribId}" class="bloque-distribucion-cc" style="margin-top:10px; border:1px dashed #007866; padding:10px; display:none;">
+                <button type="button" class="btn btn-sm btn-outline-info mb-2" id="${btnId}">+ Agregar CC</button>
+                <div id="${tablaId}"></div>
+                <div style="margin-top:8px;">
+                    <strong>Total monto: <span id="${totalId}">$0</span></strong>
+                </div>
+            </div>`;
+        }
+
+    } else if (tipoCampo === 'radio') {
+        listaDin.forEach(item => {
+            const checked = (valorPorDefecto === String(item.valor_opcion)) ? 'checked' : '';
+            html += `<div class="form-check form-check-inline">
+          <input class="form-check-input" type="radio" name="campo_${campoId}${suffix}" value="${item.valor_opcion}" id="radio_${campoId}${suffix}_${item.valor_opcion}" ${checked} ${esObligatorio ? 'required' : ''}>
+          <label class="form-check-label" for="radio_${campoId}${suffix}_${item.valor_opcion}">${item.etiqueta_opcion}</label>
+        </div>`;
+        });
+    } else if (tipoCampo === 'checkbox') {
+        listaDin.forEach(item => {
+            const isChecked = valorPorDefecto.split(',').includes(String(item.valor_opcion)) ? 'checked' : '';
+            html += `<div class="form-check form-check-inline">
+          <input class="form-check-input" type="checkbox" name="campo_${campoId}${suffix}[]" value="${item.valor_opcion}" id="chk_${campoId}${suffix}_${item.valor_opcion}" ${isChecked}>
+          <label class="form-check-label" for="chk_${campoId}${suffix}_${item.valor_opcion}">${item.etiqueta_opcion}</label>
+        </div>`;
+        });
+    }
+    return html;
+}
+
+function generarHTMLCampoEstatico(tipoCampo, campoId, opciones, valorPorDefecto, esObligatorio, suffix = '') {
+    let html = '';
+    if (tipoCampo === 'select') {
+        html += `<select class="form-control form-control-sm" name="campo_${campoId}${suffix}" ${esObligatorio ? 'required' : ''}>`;
+        html += `<option value="">-- Seleccione --</option>`;
+        opciones.forEach(op => {
+            const selected = (valorPorDefecto === op.valor_opcion) ? 'selected' : '';
+            html += `<option value="${op.valor_opcion}" ${selected}>${op.etiqueta_opcion}</option>`;
+        });
+        html += `</select>`;
+    } else if (tipoCampo === 'radio') {
+        opciones.forEach(op => {
+            const checked = (valorPorDefecto === op.valor_opcion) ? 'checked' : '';
+            html += `<div class="form-check form-check-inline">
+      <input class="form-check-input" type="radio" name="campo_${campoId}${suffix}" value="${op.valor_opcion}" id="radio_${campoId}${suffix}_${op.id}" ${checked} ${esObligatorio ? 'required' : ''}>
+      <label class="form-check-label" for="radio_${campoId}${suffix}_${op.id}">${op.etiqueta_opcion}</label>
+    </div>`;
+        });
+    } else if (tipoCampo === 'checkbox') {
+        opciones.forEach(op => {
+            const isChecked = valorPorDefecto.split(',').includes(op.valor_opcion) ? 'checked' : '';
+            html += `<div class="form-check form-check-inline">
+      <input class="form-check-input" type="checkbox" name="campo_${campoId}${suffix}[]" value="${op.valor_opcion}" id="chk_${campoId}${suffix}_${op.id}" ${isChecked}>
+      <label class="form-check-label" for="chk_${campoId}${suffix}_${op.id}">${op.etiqueta_opcion}</label>
+    </div>`;
+        });
+    }
+    return html;
+}
+
+function generarHTMLCampoBasico(tipoCampo, campoId, valorPorDefecto, esObligatorio, suffix = '') {
+    let html = '';
+    switch (tipoCampo) {
+        case 'text':
+            html = `<input type="text" class="form-control form-control-sm" name="campo_${campoId}${suffix}" value="${valorPorDefecto}" ${esObligatorio ? 'required' : ''}>`;
+            break;
+        case 'textarea':
+            html = `<textarea class="form-control form-control-sm" name="campo_${campoId}${suffix}" rows="3" ${esObligatorio ? 'required' : ''}>${valorPorDefecto}</textarea>`;
+            break;
+        case 'file':
+            html = `
+            <div class="adjunto-linea-simple">
+                <input type="file" id="upload_subirArchivo_${campoId}${suffix}" class="form-control-file input-upload-archivo" />
+                <input type="hidden" id="id_upload_subirArchivo_${campoId}${suffix}" name="id_upload_subirArchivo_${campoId}${suffix}" value="${valorPorDefecto}">
+            </div>`;
+            break;
+        case 'date':
+            html = `<input type="date" class="form-control form-control-sm" name="campo_${campoId}${suffix}" value="${valorPorDefecto}" ${esObligatorio ? 'required' : ''}>`;
+            break;
+        case 'int':
+            html = `<input type="number" class="form-control form-control-sm" name="campo_${campoId}${suffix}" step="1" value="${valorPorDefecto}" ${esObligatorio ? 'required' : ''}>`;
+            break;
+        case 'decimal':
+            html = `<input type="number" id="campo_${campoId}${suffix}" class="form-control form-control-sm" name="campo_${campoId}${suffix}" step="any" value="${valorPorDefecto}" ${esObligatorio ? 'required' : ''}>`;
+            break;
+        default:
+            html = `<input type="text" class="form-control form-control-sm" name="campo_${campoId}${suffix}" value="${valorPorDefecto}" ${esObligatorio ? 'required' : ''}>`;
+            break;
+    }
+    return html;
+}
+
+function agregarLineaArchivo(campoId, tablaContenedor, opcionesTipoDoc = []) {
+    const timestamp = Date.now();
+    const suffix = `_${campoId}_${timestamp}`;
+
+    const linea = document.createElement('div');
+    linea.className = 'linea-archivo row mb-2 align-items-center';
+    linea.innerHTML = `
+        <div class="col-md-5">
+            <select class="form-control form-control-sm select-tipo-doc">
+                <option value="">-- Tipo de documento --</option>
+                ${opcionesTipoDoc.map(op => `<option value="${op.valor_opcion}">${op.etiqueta_opcion}</option>`).join('')}
+            </select>
+        </div>
+        <div class="col-md-5">
+            <input type="file" id="upload_subirArchivo_${campoId}${suffix}" class="form-control-file input-upload-archivo" />
+            <input type="hidden" id="id_upload_subirArchivo_${campoId}${suffix}" name="id_upload_subirArchivo_${campoId}${suffix}" value="">
+        </div>
+        <div class="col-md-2 text-end d-flex align-items-start">
+            <button class="btn btn-sm btn-danger btnEliminarLineaArchivo" title="Eliminar archivo"><i class="fa fa-trash"></i></button>
+        </div>
+    `;
+
+    tablaContenedor.appendChild(linea);
+
+    const btnEliminar = linea.querySelector('.btnEliminarLineaArchivo');
+    if (btnEliminar) {
+        btnEliminar.addEventListener('click', () => {
+            linea.remove();
+        });
+    }
+
+    const fileInput = linea.querySelector(`#upload_subirArchivo_${campoId}${suffix}`);
+    const hiddenInput = linea.querySelector(`#id_upload_subirArchivo_${campoId}${suffix}`);
+
+    if (fileInput) {
+        fileInput.addEventListener('change', async () => {
+            if (fileInput.files.length > 0) {
+                const file = fileInput.files[0];
+                const url = await uploadFile(file);
+                if (url) {
+                    hiddenInput.value = url;
+                    Swal.fire('Éxito', 'Archivo subido correctamente.', 'success');
+                } else {
+                    hiddenInput.value = '';
+                    fileInput.value = '';
+                    Swal.fire('Error', 'No se pudo subir el archivo.', 'error');
+                }
+            }
+        });
+    }
+}
+
+async function renderBloqueAdjuntosDinamico(campoTipo, campoArchivo, contenedor) {
+    const uniqueKey = `bloqueAdjuntos_${campoTipo.id}_${Date.now()}`;
+    const wrapper = document.createElement('div');
+    wrapper.classList.add('campo-personalizado', 'bloque-adjuntos-dinamico');
+    wrapper.style.border = '1px dashed #0a5d6b';
+    wrapper.style.padding = '10px';
+    wrapper.style.marginBottom = '15px';
+    wrapper.setAttribute('data-nombre-interno', 'documento_adjunto_dinamico');
+    wrapper.setAttribute('data-campo-id', campoArchivo.id);
+    wrapper.setAttribute('data-obligatorio', parseInt(campoArchivo.obligatorio) === 1 ? '1' : '0');
+
+    const label = document.createElement('label');
+    label.innerHTML = `${campoArchivo.label} ${parseInt(campoArchivo.obligatorio) === 1 ? '<span style="color:red">*</span>' : ''}`;
+    wrapper.appendChild(label);
+
+    const contenedorLineas = document.createElement('div');
+    contenedorLineas.id = `contenedor_lineas_${uniqueKey}`;
+    wrapper.appendChild(contenedorLineas);
+
+    const btnAgregar = document.createElement('button');
+    btnAgregar.className = 'btn btn-sm btn-outline-info mt-2';
+    btnAgregar.type = 'button';
+    btnAgregar.innerHTML = '+ Agregar documento';
+    wrapper.appendChild(btnAgregar);
+
+    const opcionesResp = await ZEN_QUERY({ id: queryOpcionesCampo, parametros: { id_plantilla_campo: campoTipo.id } });
+    const opciones = Array.isArray(opcionesResp.result) ? opcionesResp.result : [];
+
+    if (!window.selectoresCCPorPlantilla) window.selectoresCCPorPlantilla = {};
+    if (!window.selectoresCCPorPlantilla[campoTipo.id]) window.selectoresCCPorPlantilla[campoTipo.id] = [];
+
+    const agregarLinea = () => {
+        const linea = document.createElement('div');
+        linea.className = 'row mb-2 linea-bloque-adjunto align-items-center';
+
+        linea.innerHTML = `
+            <div class="col-md-4">
+                <select class="form-control form-control-sm select-tipo-doc">
+                    <option value="">-- Tipo de documento --</option>
+                    ${opciones.map(op => `<option value="${op.valor_opcion}">${op.etiqueta_opcion}</option>`).join('')}
+                </select>
+            </div>
+            <div class="col-md-4">
+                <select class="form-control form-control-sm select-cc-asociado">
+                    <option value="">-- Asociar a CC --</option>
+                </select>
+            </div>
+            <div class="col-md-3 d-flex align-items-center">
+                <label class="btn btn-sm btn-outline-secondary mb-0 me-2">
+                    <i class="fa fa-paperclip"></i>
+                    <input type="file" class="d-none input-file-doc" accept="image/*,application/pdf">
+                </label>
+                <span class="nombre-archivo" style="font-size: 0.85rem;"></span>
+                <input type="hidden" class="input-url-doc" />
+            </div>
+            <div class="col-md-1 text-end">
+                <button type="button" class="btn btn-sm btn-danger btnEliminarLinea"><i class="fa fa-trash"></i></button>
+            </div>
+        `;
+
+        contenedorLineas.appendChild(linea);
+
+        const selectCC = linea.querySelector('.select-cc-asociado');
+        const btnEliminar = linea.querySelector('.btnEliminarLinea');
+
+        // Registrar selector para actualización global
+        window.selectoresCCPorPlantilla[campoTipo.id].push(selectCC);
+        actualizarSelectoresCC(); // Llenar opciones al momento de agregar
+
+        // Eliminar línea y desregistrar selector
+        btnEliminar.addEventListener('click', () => {
+            linea.remove();
+            const index = window.selectoresCCPorPlantilla[campoTipo.id].indexOf(selectCC);
+            if (index !== -1) window.selectoresCCPorPlantilla[campoTipo.id].splice(index, 1);
+        });
+
+        const fileInput = linea.querySelector('.input-file-doc');
+        const urlInput = linea.querySelector('.input-url-doc');
+        const labelNombre = linea.querySelector('.nombre-archivo');
+
+        fileInput.addEventListener('change', async () => {
+            const file = fileInput.files[0];
+            if (file) {
+                labelNombre.textContent = 'Subiendo...';
+                const url = await uploadFile(file);
+                if (url) {
+                    urlInput.value = url;
+                    labelNombre.textContent = file.name;
+                    Swal.fire({ icon: 'success', title: 'Archivo subido', text: file.name });
+                } else {
+                    urlInput.value = '';
+                    labelNombre.textContent = '';
+                    Swal.fire({ icon: 'error', title: 'Error', text: 'No se pudo subir el archivo' });
+                }
+            }
+        });
+    };
+
+    agregarLinea();
+    btnAgregar.addEventListener('click', agregarLinea);
+    contenedor.appendChild(wrapper);
+}
+
+async function renderBloqueArchivosSimples(campo, contenedor) {
+    const uniqueKey = `bloqueArchivos_${campo.id}_${Date.now()}`;
+
+    const wrapper = document.createElement('div');
+    wrapper.classList.add('campo-personalizado', 'bloque-archivos-simples');
+    wrapper.style.border = '1px dashed #0066cc';
+    wrapper.style.padding = '10px';
+    wrapper.style.marginBottom = '15px';
+    wrapper.setAttribute('data-nombre-interno', campo.nombre_interno || '');
+    wrapper.setAttribute('data-campo-id', campo.id);
+    wrapper.setAttribute('data-obligatorio', parseInt(campo.obligatorio) === 1 ? '1' : '0');
+
+    const label = document.createElement('label');
+    label.innerHTML = `${campo.label} ${parseInt(campo.obligatorio) === 1 ? '<span style="color:red">*</span>' : ''}`;
+    wrapper.appendChild(label);
+
+    const contenedorLineas = document.createElement('div');
+    contenedorLineas.id = `contenedor_lineas_${uniqueKey}`;
+    wrapper.appendChild(contenedorLineas);
+
+    const btnAgregar = document.createElement('button');
+    btnAgregar.className = 'btn btn-sm btn-outline-info mt-2';
+    btnAgregar.type = 'button';
+    btnAgregar.innerHTML = '+ Agregar archivo';
+    wrapper.appendChild(btnAgregar);
+
+    const agregarLinea = () => {
+        const listaCC = Array.isArray(window.listaCCSolicitud) ? window.listaCCSolicitud : [];
+
+        const linea = document.createElement('div');
+        linea.className = 'row mb-2 linea-bloque-archivo align-items-center';
+
+        linea.innerHTML = `
+            <div class="col-md-4">
+                <select class="form-control form-control-sm select-cc-asociado">
+                    <option value="">-- Asociar a CC --</option>
+                    ${listaCC.map(cc => `
+                        <option value="${cc.idCentroCosto}___${cc.idEmpresa}">
+                            ${cc.nombreCentro} <${cc.nombreEmpresa}>
+                        </option>
+                    `).join('')}
+                </select>
+            </div>
+            <div class="col-md-6 d-flex align-items-center">
+                <label class="btn btn-sm btn-outline-secondary mb-0 me-2">
+                    <i class="fa fa-paperclip"></i>
+                    <input type="file" class="d-none input-file-solo" accept="image/*,application/pdf">
+                </label>
+                <span class="nombre-archivo" style="font-size: 0.85rem;"></span>
+                <input type="hidden" class="input-url-archivo" />
+            </div>
+            <div class="col-md-2 text-end">
+                <button type="button" class="btn btn-sm btn-danger btnEliminarLinea"><i class="fa fa-trash"></i></button>
+            </div>
+        `;
+
+        contenedorLineas.appendChild(linea);
+
+        linea.querySelector('.btnEliminarLinea').addEventListener('click', () => {
+            linea.remove();
+        });
+
+        const fileInput = linea.querySelector('.input-file-solo');
+        const urlInput = linea.querySelector('.input-url-archivo');
+        const labelNombre = linea.querySelector('.nombre-archivo');
+
+        fileInput.addEventListener('change', async () => {
+            const file = fileInput.files[0];
+            if (file) {
+                labelNombre.textContent = 'Subiendo...';
+                const url = await uploadFile(file);
+                if (url) {
+                    urlInput.value = url;
+                    labelNombre.textContent = file.name;
+                    Swal.fire({ icon: 'success', title: 'Archivo subido', text: file.name });
+                } else {
+                    urlInput.value = '';
+                    labelNombre.textContent = '';
+                    Swal.fire({ icon: 'error', title: 'Error', text: 'No se pudo subir el archivo' });
+                }
+            }
+        });
+
+        // === Registrar selector para actualización dinámica ===
+        const selectorCC = linea.querySelector('.select-cc-asociado');
+        if (!window.selectoresCCPorPlantilla) window.selectoresCCPorPlantilla = {};
+        if (!window.selectoresCCPorPlantilla[campo.id]) window.selectoresCCPorPlantilla[campo.id] = [];
+        window.selectoresCCPorPlantilla[campo.id].push(selectorCC);
+    };
+
+    agregarLinea();
+    btnAgregar.addEventListener('click', agregarLinea);
+
+    contenedor.appendChild(wrapper);
+}
+
+async function insertarBloqueEmpresa(wrapper) {
+    const contenedor = wrapper.querySelector('#contenedorEmpresas');
+
+    const bloqueWrapper = document.createElement('div');
+    bloqueWrapper.className = 'col-12 mb-3';
+
+    const bloque = document.createElement('div');
+    bloque.className = 'bloque-empresa-cc row p-3';
+
+    // === Columna: Empresa ===
+    const colEmpresa = document.createElement('div');
+    colEmpresa.className = 'col-md-4';
+
+    const labelEmpresa = document.createElement('label');
+    labelEmpresa.className = 'form-label';
+    labelEmpresa.innerHTML = 'Empresa<span class="text-danger">*</span>';
+    colEmpresa.appendChild(labelEmpresa);
+
+    const selectEmpresa = document.createElement('select');
+    selectEmpresa.className = 'form-control select-empresa';
+    selectEmpresa.innerHTML = '<option value="">-- Seleccione empresa --</option>';
+    colEmpresa.appendChild(selectEmpresa);
+
+    // Cargar empresas
+    try {
+        const respEmpresas = await ZEN_QUERY({ id: queryEmpresas, parametros: {} });
+        const empresas = Array.isArray(respEmpresas.result) ? respEmpresas.result : [];
+        empresas.forEach(emp => {
+            const option = document.createElement('option');
+            option.value = emp.valor_opcion;
+            option.textContent = emp.etiqueta_opcion;
+            selectEmpresa.appendChild(option);
+        });
+        habilitarBusquedaSelect(selectEmpresa, '-- Seleccione empresa --');
+    } catch (e) {
+        console.error('Error al cargar empresas:', e);
+    }
+
+    // === Columna: Centro de Costo ===
+    const colCC = document.createElement('div');
+    colCC.className = 'col-md-4';
+
+    const labelCC = document.createElement('label');
+    labelCC.className = 'form-label';
+    labelCC.innerHTML = 'Centro de costo<span class="text-danger">*</span>';
+    colCC.appendChild(labelCC);
+
+    const selectCC = document.createElement('select');
+    selectCC.className = 'form-control select-centro-costo';
+    selectCC.innerHTML = '<option value="">-- Seleccione centro de costo --</option>';
+    colCC.appendChild(selectCC);
+
+    // === Columna: Monto directo ===
+    const colMonto = document.createElement('div');
+    colMonto.className = 'col-md-3 campo-monto-directo';
+
+    const labelMonto = document.createElement('label');
+    labelMonto.className = 'form-label';
+    labelMonto.textContent = 'Monto $';
+    colMonto.appendChild(labelMonto);
+
+    const inputMonto = document.createElement('input');
+    inputMonto.type = 'number';
+    inputMonto.min = 0;
+    inputMonto.step = 'any';
+    inputMonto.className = 'form-control input-monto-directo';
+    inputMonto.placeholder = 'Monto $';
+    inputMonto.addEventListener('input', () => {
+        actualizarTotalGeneral();
+        actualizarSelectoresCC();
+    });
+    colMonto.appendChild(inputMonto);
+
+    // === Columna: Eliminar ===
+    const colEliminar = document.createElement('div');
+    colEliminar.className = 'col-md-1 d-flex align-items-end justify-content-end';
+
+    const btnEliminar = document.createElement('button');
+    btnEliminar.className = 'btn btn-sm btn-danger';
+    btnEliminar.type = 'button';
+    btnEliminar.innerHTML = '<i class="fa fa-trash"></i>';
+    btnEliminar.title = 'Eliminar bloque';
+    btnEliminar.addEventListener('click', () => {
+        bloqueWrapper.remove();
+        actualizarTotalGeneral();
+        actualizarSelectoresCC();
+    });
+    colEliminar.appendChild(btnEliminar);
+
+    // === Contenedor distribución por CC ===
+    const distribucionCC = document.createElement('div');
+    distribucionCC.className = 'bloque-distribucion-cc d-none';
+
+    const filaBotonAgregar = document.createElement('div');
+    filaBotonAgregar.className = 'fila-boton-agregar d-flex justify-content-center mb-3';
+
+    const btnAgregarLinea = document.createElement('button');
+    btnAgregarLinea.className = 'btn btn-sm btn-verde-institucional';
+    btnAgregarLinea.type = 'button';
+    btnAgregarLinea.textContent = '+ Agregar línea de distribución';
+    filaBotonAgregar.appendChild(btnAgregarLinea);
+
+    const tablaDistribucion = document.createElement('div');
+    tablaDistribucion.className = 'tabla-distribucion-cc';
+
+    const totalDistribucion = document.createElement('div');
+    totalDistribucion.className = 'mt-2';
+    totalDistribucion.innerHTML = '<strong>Total: <span class="total-distribucion">$ 0</span></strong>';
+
+    distribucionCC.appendChild(filaBotonAgregar);
+    distribucionCC.appendChild(tablaDistribucion);
+    distribucionCC.appendChild(totalDistribucion);
+
+    // === Eventos ===
+    selectEmpresa.addEventListener('change', async () => {
+        const empresaId = selectEmpresa.value;
+        selectCC.innerHTML = '<option value="">-- Seleccione centro de costo --</option>';
+
+        if (!empresaId) {
+            actualizarSelectoresCC();
+            return;
+        }
+
+        try {
+            const respCC = await ZEN_QUERY({
+                id: queryCentrosCostos,
+                parametros: { valor_padre: empresaId }
+            });
+
+            const ccList = Array.isArray(respCC.result) ? respCC.result : [];
+            selectCC.innerHTML += '<option value="__DISTRIBUCION_CC__">Distribución por CC</option>';
+
+            ccList.forEach(cc => {
+                const option = document.createElement('option');
+                option.value = cc.valor_opcion;
+                option.textContent = cc.etiqueta_opcion;
+                selectCC.appendChild(option);
+            });
+
+            actualizarSelectoresCC();
+        } catch (e) {
+            console.error('Error al cargar centros de costo:', e);
+        }
+    });
+
+    selectCC.addEventListener('change', () => {
+        if (selectCC.value === '__DISTRIBUCION_CC__') {
+            distribucionCC.classList.remove('d-none');
+            colMonto.classList.add('d-none');
+        } else {
+            distribucionCC.classList.add('d-none');
+            colMonto.classList.remove('d-none');
+            tablaDistribucion.innerHTML = '';
+            totalDistribucion.querySelector('.total-distribucion').textContent = '$ 0';
+        }
+        actualizarTotalGeneral();
+        actualizarSelectoresCC();
+    });
+
+    btnAgregarLinea.addEventListener('click', () => {
+        const linea = document.createElement('div');
+        linea.className = 'linea-distribucion row mb-2';
+        linea.innerHTML = `
+            <div class="col-md-7">
+                <select class="form-control form-control-sm sel-cc-linea">
+                    <option value="">-- Seleccione CC --</option>
+                    ${Array.from(selectCC.options)
+                        .filter(opt => opt.value && opt.value !== '__DISTRIBUCION_CC__')
+                        .map(opt => `<option value="${opt.value}">${opt.textContent}</option>`)
+                        .join('')}
+                </select>
+            </div>
+            <div class="col-md-3">
+                <input type="number" class="form-control form-control-sm input-monto-linea" min="0" value="0" step="any" placeholder="Monto $">
+            </div>
+            <div class="col-md-2 text-end">
+                <button class="btn btn-sm btn-danger btnEliminarLinea"><i class="fa fa-trash"></i></button>
+            </div>
+        `;
+
+        tablaDistribucion.appendChild(linea);
+        refrescarTotalDistribucion(distribucionCC);
+
+        linea.querySelector('.btnEliminarLinea').addEventListener('click', () => {
+            linea.remove();
+            actualizarTotalGeneral();
+            refrescarTotalDistribucion(distribucionCC);
+            actualizarSelectoresCC();
+        });
+
+        linea.querySelectorAll('input, select').forEach(el => {
+            el.addEventListener('input', () => {
+                refrescarTotalDistribucion(distribucionCC);
+                actualizarTotalGeneral();
+                actualizarSelectoresCC();
+            });
+        });
+
+        actualizarTotalGeneral();
+        actualizarSelectoresCC();
+    });
+
+    // === Ensamblar ===
+    bloque.appendChild(colEmpresa);
+    bloque.appendChild(colCC);
+    bloque.appendChild(colMonto);
+    bloque.appendChild(colEliminar);
+    bloque.appendChild(distribucionCC);
+    bloqueWrapper.appendChild(bloque);
+    contenedor.appendChild(bloqueWrapper);
+}
+
+function refrescarTotalDistribucion(bloqueDistrib) {
+    const inputs = bloqueDistrib.querySelectorAll('.input-monto-linea');
+    let total = 0;
+    inputs.forEach(i => total += parseFloat(i.value || 0));
+    const lbl = bloqueDistrib.querySelector('.total-distribucion');
+    if (lbl) lbl.textContent = `$ ${total.toLocaleString('es-CL', { minimumFractionDigits: 0 })}`;
+}
+
+function actualizarTotalGeneral() {
+    let totalGlobal = 0;
+
+    document.querySelectorAll('.bloque-empresa-cc').forEach(bloque => {
+        const esDistribucion = !bloque.querySelector('.bloque-distribucion-cc').classList.contains('d-none');
+
+        if (esDistribucion) {
+            bloque.querySelectorAll('.input-monto-linea').forEach(input => {
+                const valor = parseFloat(input.value);
+                if (!isNaN(valor)) totalGlobal += valor;
+            });
+        } else {
+            const montoInput = bloque.querySelector('.input-monto-directo');
+            if (montoInput) {
+                const valor = parseFloat(montoInput.value);
+                if (!isNaN(valor)) totalGlobal += valor;
+            }
+        }
+    });
+
+    // Buscar campo asociado a la plantilla actual
+    if (window.camposMontoDistribucion) {
+        Object.values(window.camposMontoDistribucion).forEach(info => {
+            const inputCampo = document.getElementById(info.inputId);
+            if (inputCampo) {
+                inputCampo.value = totalGlobal.toFixed(0);
+                inputCampo.setAttribute('readonly', 'readonly');
+            }
+        });
+    }
+}
+
+function actualizarSelectoresCC() {
+    // 1. Limpiar lista actual
+    window.listaCCSolicitud = [];
+
+    // 2. Recorrer todos los bloques de empresa activos
+    const bloquesEmpresa = document.querySelectorAll('.bloque-empresa-cc');
+    bloquesEmpresa.forEach(bloque => {
+        const empresaSelect = bloque.querySelector('.select-empresa');
+        const empresaId = empresaSelect?.value;
+        const empresaTexto = empresaSelect?.selectedOptions[0]?.textContent?.trim();
+
+        if (!empresaId || !empresaTexto) return;
+
+        const ccSelect = bloque.querySelector('.select-centro-costo');
+        const esDistribucion = ccSelect?.value === '__DISTRIBUCION_CC__';
+
+        if (esDistribucion) {
+            // Recorrer líneas internas
+            const lineas = bloque.querySelectorAll('.linea-distribucion');
+            lineas.forEach(linea => {
+                const ccLinea = linea.querySelector('.sel-cc-linea');
+                const ccId = ccLinea?.value;
+                const ccTexto = ccLinea?.selectedOptions[0]?.textContent?.trim();
+                if (ccId && ccTexto) {
+                    window.listaCCSolicitud.push({
+                        idCentroCosto: ccId,
+                        idEmpresa: empresaId,
+                        nombreCentro: ccTexto,
+                        nombreEmpresa: empresaTexto
+                    });
+                }
+            });
+        } else {
+            const ccId = ccSelect?.value;
+            const ccTexto = ccSelect?.selectedOptions[0]?.textContent?.trim();
+            if (ccId && ccTexto && ccId !== '__DISTRIBUCION_CC__') {
+                window.listaCCSolicitud.push({
+                    idCentroCosto: ccId,
+                    idEmpresa: empresaId,
+                    nombreCentro: ccTexto,
+                    nombreEmpresa: empresaTexto
+                });
+            }
+        }
+    });
+
+    // 3. Actualizar selects en los bloques de adjuntos
+    const plantillas = Object.keys(window.selectoresCCPorPlantilla || {});
+    plantillas.forEach(plantillaId => {
+        const selectores = window.selectoresCCPorPlantilla[plantillaId] || [];
+        selectores.forEach(select => {
+            const currentVal = select.value;
+            select.innerHTML = '<option value="">-- Asociar a CC --</option>';
+            window.listaCCSolicitud.forEach(cc => {
+                const option = document.createElement('option');
+                option.value = `${cc.idCentroCosto}___${cc.idEmpresa}`;
+                option.textContent = `${cc.nombreCentro} <${cc.nombreEmpresa}>`;
+                if (option.value === currentVal) option.selected = true;
+                select.appendChild(option);
+            });
+        });
+    });
+}
+
+/////////////////////////////////////////////////////////////// RENDERIZADO DE CAMPOS ///////////////////////////////////////////////////////////////
+
+
+/////////////////////////////////////////////////////////////// GUARDADO DE CAMPOS ///////////////////////////////////////////////////////////////
+
+async function guardarCamposTicket(id_mensaje_ticket) {
+    try {
+        if (!validarDistribuciones()) return false;
+        if (!validarAsociacionArchivosCC()) return false;
+
+        const bloques = document.querySelectorAll('#contenedorTareas .bloque-tarea');
+
+        for (let bloque of bloques) {
+            const wrappers = bloque.querySelectorAll('.campo-personalizado');
+
+            for (let wrapper of wrappers) {
+                const campoId = wrapper.getAttribute('data-campo-id');
+                const obligatorio = wrapper.getAttribute('data-obligatorio');
+                const nombreInterno = wrapper.getAttribute('data-nombre-interno') || '';
+                let value = '';
+
+                // Bloques especiales
+                if (nombreInterno === 'documento_adjunto_dinamico') {
+                    const lineas = wrapper.querySelectorAll('.linea-bloque-adjunto');
+                    for (let i = 0; i < lineas.length; i++) {
+                        const tipo = lineas[i].querySelector('.select-tipo-doc')?.value?.trim() || '';
+                        const archivo = lineas[i].querySelector('.input-url-doc')?.value?.trim() || '';
+                        const cc = lineas[i].querySelector('.select-cc-asociado')?.value?.trim() || '';
+
+                        if (!tipo && !archivo && !cc) continue;
+
+                        if (!tipo || !archivo || !cc) {
+                            await Swal.fire({
+                                icon: 'error',
+                                title: 'Línea incompleta',
+                                text: !tipo ? 'Debe seleccionar un tipo de documento.'
+                                    : !archivo ? 'Debe subir un archivo.'
+                                    : 'Debe asociar el documento a un centro de costo.'
+                            });
+                            return false;
+                        }
+
+                        if (tipo.includes(':::') || archivo.includes(':::') || cc.includes(':::')) {
+                            await Swal.fire({ icon: 'error', title: 'Error interno', text: 'Formato no permitido en tipo, archivo o centro de costo.' });
+                            return false;
+                        }
+
+                        const valor = `${tipo}:::${archivo}:::${cc}`;
+
+                        const resp = await ZEN_QUERY({
+                            id: queryInsertarCampoTarea,
+                            parametros: {
+                                id_tarea_servicio: id_mensaje_ticket,
+                                id_campo: campoId,
+                                valor: valor
+                            }
+                        });
+
+                        if (!resp?.accion) {
+                            await Swal.fire({ icon: 'error', title: 'Error al guardar', text: `No se pudo guardar el documento en la línea ${i + 1}.` });
+                            return false;
+                        }
+                    }
+                    continue;
+                }
+
+                if (wrapper.classList.contains('bloque-archivos-simples')) {
+                    const lineas = wrapper.querySelectorAll('.linea-bloque-archivo');
+                    for (let i = 0; i < lineas.length; i++) {
+                        const url = lineas[i].querySelector('.input-url-archivo')?.value?.trim() || '';
+                        const nombre = lineas[i].querySelector('.nombre-archivo')?.textContent?.trim() || '';
+                        const cc = lineas[i].querySelector('.select-cc-asociado')?.value?.trim() || '';
+
+                        if (!url && !nombre && !cc) continue;
+
+                        if (!url || !nombre || !cc) {
+                            await Swal.fire({
+                                icon: 'error',
+                                title: 'Línea incompleta',
+                                text: !nombre ? 'Debe indicar un nombre de archivo.'
+                                    : !url ? 'Debe subir un archivo.'
+                                    : 'Debe asociar el archivo a un centro de costo.'
+                            });
+                            return false;
+                        }
+
+                        if (nombre.includes(':::') || url.includes(':::') || cc.includes(':::')) {
+                            await Swal.fire({ icon: 'error', title: 'Error interno', text: 'Formato no permitido en nombre, archivo o centro de costo.' });
+                            return false;
+                        }
+
+                        const valor = `${nombre}:::${url}:::${cc}`;
+
+                        const resp = await ZEN_QUERY({
+                            id: queryInsertarCampoTarea,
+                            parametros: {
+                                id_tarea_servicio: id_mensaje_ticket,
+                                id_campo: campoId,
+                                valor: valor
+                            }
+                        });
+
+                        if (!resp?.accion) {
+                            await Swal.fire({ icon: 'error', title: 'Error al guardar', text: `No se pudo guardar el archivo en la línea ${i + 1}.` });
+                            return false;
+                        }
+                    }
+                    continue;
+                }
+
+                // Inputs generales
+                const checkboxEls = wrapper.querySelectorAll('input[type="checkbox"]');
+                if (checkboxEls.length > 0) {
+                    value = Array.from(checkboxEls).filter(chk => chk.checked).map(chk => chk.value).join(',');
+                } else {
+                    const radioEl = wrapper.querySelector('input[type="radio"]:checked');
+                    if (radioEl) {
+                        value = radioEl.value;
+                    } else {
+                        const inputEl = wrapper.querySelector('input, select, textarea');
+                        if (inputEl) value = inputEl.value;
+                    }
+                }
+
+                // Validación obligatorios
+                if (obligatorio === "1" && (!value || value.trim() === "")) {
+                    const labelText = wrapper.querySelector('label')?.innerText || 'Campo sin nombre';
+                    await Swal.fire({ icon: 'error', title: 'Campo obligatorio', text: `El campo ${labelText} es obligatorio.` });
+                    return false;
+                }
+
+                // Manejo especial: fecha_compromiso
+                if (nombreInterno === 'fecha_compromiso') {
+                    if (!value.trim()) continue;
+                    const resp = await ZEN_QUERY({
+                        id: queryNuevaFechaCriticidad,
+                        parametros: {
+                            ticket_id: id_mensaje_ticket,
+                            usuario_id: id_usuario,
+                            tipo_fecha: 1,
+                            fecha: value
+                        }
+                    });
+                    if (!resp?.accion) {
+                        await Swal.fire({ icon: 'error', title: 'Error', text: 'No se pudo guardar la fecha de compromiso.' });
+                        return false;
+                    }
+                    continue;
+                }
+
+                // Manejo especial: metodo_pago
+                if (nombreInterno === 'metodo_pago') {
+                    if (!value.trim()) continue;
+                    const resp = await ZEN_QUERY({
+                        id: queryModificarFormaPago,
+                        parametros: {
+                            forma_pago: value,
+                            id: id_mensaje_ticket
+                        }
+                    });
+                    if (!resp?.accion) {
+                        await Swal.fire({ icon: 'error', title: 'Error', text: 'No se pudo guardar el método de pago.' });
+                        return false;
+                    }
+                    continue;
+                }
+
+                // Guardado general
+                const params = {
+                    id_tarea_servicio: id_mensaje_ticket,
+                    id_campo: campoId,
+                    valor: value
+                };
+
+                await ZEN_QUERY({ id: queryInsertarCampoTarea, parametros: params });
+            }
+        }
+
+        await guardarDistribuciones(id_mensaje_ticket);
+        return true;
+
+    } catch (error) {
+        console.error('[guardarCamposTicket] Error inesperado:', error);
+        await Swal.fire({ icon: 'error', title: 'Error', text: 'Error al guardar campos del ticket.' });
+        return false;
+    }
+}
+
+function validarDistribuciones() {
+    const bloquesDistrib = document.querySelectorAll('.bloque-distribucion-cc');
+
+    for (let bloque of bloquesDistrib) {
+        if (bloque.style.display !== 'none') {
+            // Validar que el bloque tenga un ID válido
+            if (!bloque.id || !bloque.id.startsWith('bloqueDistribucion_')) {
+                console.warn('[validarDistribuciones] Bloque sin ID válido:', bloque);
+                continue;
+            }
+
+            // Obtener IDs derivados del ID del bloque
+            const tablaId = bloque.id.replace('bloqueDistribucion_', 'tablaDistribucion_');
+            const totalId = bloque.id.replace('bloqueDistribucion_', 'totalDistribucion_');
+
+            const tabla = document.getElementById(tablaId);
+            const totalSpan = document.getElementById(totalId);
+
+            if (!tabla || !totalSpan) {
+                console.warn(`[validarDistribuciones] No se encontraron elementos esperados: ${tablaId} o ${totalId}`);
+                continue;
+            }
+
+            // Obtener monto total desde texto
+            const totalStr = totalSpan.innerText.replace(/[$\s,.]/g, '');
+            const totalMonto = parseFloat(totalStr) || 0;
+
+            // Obtener input monto original (asociado a plantilla)
+            const bloqueTarea = bloque.closest('.bloque-tarea');
+            const plantillaIdMatch = bloqueTarea?.getAttribute('data-plantilla-id');
+
+            if (!plantillaIdMatch || !window.camposMontoDistribucion || !window.camposMontoDistribucion[plantillaIdMatch]) {
+                continue;
+            }
+
+            const campoInfo = window.camposMontoDistribucion[plantillaIdMatch];
+            const inputMonto = document.getElementById(campoInfo.inputId);
+            const montoOriginal = parseFloat(inputMonto?.value || 0);
+
+            // Si necesitas comparar los montos, descomenta esta validación:
+            /*
+            if (Math.abs(montoOriginal - totalMonto) > 1) {
+                Swal.fire({
+                    icon: 'error',
+                    title: 'Distribución incorrecta',
+                    text: `La suma de los montos distribuidos ($${totalMonto}) no coincide con el monto total ($${montoOriginal}).`
+                });
+                return false;
+            }
+            */
+        }
+    }
+
+    return true;
+}
+
+async function guardarDistribuciones(id_mensaje_ticket) {
+    const bloques = document.querySelectorAll('.bloque-empresa-cc');
+
+    for (let bloque of bloques) {
+        const empresaSelect = bloque.querySelector('.select-empresa');
+        const ccSelect = bloque.querySelector('.select-centro-costo');
+
+        const idEmpresa = empresaSelect?.value;
+        const tipoCC = ccSelect?.value;
+
+        if (!idEmpresa || !tipoCC) continue;
+
+        const esDistribucion = tipoCC === '__DISTRIBUCION_CC__';
+
+        if (esDistribucion) {
+            const lineas = bloque.querySelectorAll('.tabla-distribucion-cc .linea-distribucion');
+
+            let totalMonto = 0;
+            const lineasValidas = [];
+
+            lineas.forEach(linea => {
+                const selCC = linea.querySelector('select.sel-cc-linea');
+                const inpMonto = linea.querySelector('input.input-monto-linea');
+                const idCentroCosto = selCC?.value;
+                const monto = parseFloat(inpMonto?.value || 0);
+
+                if (idCentroCosto && monto > 0) {
+                    totalMonto += monto;
+                    lineasValidas.push({ idCentroCosto, monto });
+                }
+            });
+
+            for (let linea of lineasValidas) {
+                const porcentaje = ((linea.monto / totalMonto) * 100).toFixed(2);
+                const params = {
+                    id_tarea_servicio: id_mensaje_ticket,
+                    id_empresa: idEmpresa,
+                    id_centro_costo: linea.idCentroCosto,
+                    monto: linea.monto,
+                    porcentaje: porcentaje
+                };
+                await ZEN_QUERY({ id: queryInsertarDistribucion, parametros: params });
+            }
+
+        } else {
+            const montoInput = bloque.querySelector('.input-monto-directo');
+            const monto = parseFloat(montoInput?.value || 0);
+            if (monto > 0) {
+                const params = {
+                    id_tarea_servicio: id_mensaje_ticket,
+                    id_empresa: idEmpresa,
+                    id_centro_costo: tipoCC,
+                    monto: monto,
+                    porcentaje: 100
+                };
+                await ZEN_QUERY({ id: queryInsertarDistribucion, parametros: params });
+            }
+        }
+    }
+}
+
+
+async function validarCamposPersonalizadosPrevio() {
+    try {
+        const bloques = document.querySelectorAll('#contenedorTareas .bloque-tarea');
+        for (let bloque of bloques) {
+            const wrappers = bloque.querySelectorAll('.campo-personalizado');
+            for (let wrapper of wrappers) {
+                const obligatorio = wrapper.getAttribute('data-obligatorio');
+                let value = '';
+                const checkboxEls = wrapper.querySelectorAll('input[type="checkbox"]');
+                if (checkboxEls.length > 0) {
+                    const checkedValues = Array.from(checkboxEls).filter(chk => chk.checked).map(chk => chk.value);
+                    value = checkedValues.join(',');
+                } else {
+                    const radioEl = wrapper.querySelector('input[type="radio"]:checked');
+                    if (radioEl) {
+                        value = radioEl.value;
+                    } else {
+                        const hiddenFileInput = wrapper.querySelector('input[type="hidden"]');
+                        if (hiddenFileInput && hiddenFileInput.id.includes('id_upload_subirArchivo')) {
+                            value = hiddenFileInput.value;
+                        } else {
+                            const inputEl = wrapper.querySelector('input, select, textarea');
+                            if (inputEl) {
+                                value = inputEl.value;
+                            }
+                        }
+                    }
+                }
+
+                if (obligatorio === "1" && (!value || value.trim() === "")) {
+                    const labelText = wrapper.querySelector('label').innerText;
+                    Swal.fire({ icon: 'error', title: 'Campo obligatorio', text: `El campo ${labelText} es obligatorio.` });
+                    return false;
+                }
+            }
+        }
+        return true;
+    } catch (error) {
+        return false;
+    }
+}
+
+async function validarArchivosPrevio() {
+    let errores = [];
+
+    const bloquesSimples = document.querySelectorAll('.bloque-archivo-simple');
+    bloquesSimples.forEach(bloque => {
+        const inputs = bloque.querySelectorAll('input[type="file"]');
+        const obligatorio = bloque.closest('.campo-personalizado')?.getAttribute('data-obligatorio') === '1';
+
+        if (obligatorio && inputs.length === 0) {
+            errores.push('Debe adjuntar al menos un archivo en los campos requeridos.');
+        }
+
+        inputs.forEach(input => {
+            if (!input.files || input.files.length === 0) {
+                errores.push('Hay archivos requeridos que no han sido seleccionados.');
+            }
+        });
+    });
+
+    const bloquesDinamicos = document.querySelectorAll('.bloque-archivo-dinamico');
+    bloquesDinamicos.forEach(bloque => {
+        const filas = bloque.querySelectorAll('.fila-adjunto');
+        const obligatorio = bloque.closest('.campo-personalizado')?.getAttribute('data-obligatorio') === '1';
+        
+        if (obligatorio && filas.length === 0) {
+            errores.push('Debe agregar al menos un documento en los campos requeridos.');
+        }
+
+        filas.forEach(fila => {
+            const tipo = fila.querySelector('select');
+            const archivo = fila.querySelector('input[type="file"]');
+
+            if (!tipo || !tipo.value) {
+                errores.push('Debe seleccionar un tipo de documento en una de las filas.');
+            }
+
+            if (!archivo || archivo.files.length === 0) {
+                errores.push('Debe adjuntar el archivo correspondiente en una de las filas.');
+            }
+        });
+    });
+
+    if (errores.length > 0) {
+        Swal.fire({
+            icon: 'error',
+            title: 'Validación de archivos',
+            html: errores.map(e => `<p>${e}</p>`).join(''),
+        });
+        return false;
+    }
+
+    return true;
+}
+
+async function validarAsociacionArchivosCC() {
+    const tipoSolicitud = parseInt(document.getElementById('id_tipo_trabajo')?.value || '0');
+
+    // Excluir tipo 34 de la validación
+    if (tipoSolicitud === 34) return true;
+
+    const lista = Array.isArray(window.listaCCSolicitud) ? window.listaCCSolicitud : [];
+    if (lista.length === 0) return true;
+
+    const mapaCC = new Map();
+
+    // Inicializar mapa con todos los CC visibles
+    lista.forEach(cc => {
+        const clave = `${cc.idCentroCosto}___${cc.idEmpresa}`;
+        mapaCC.set(clave, 0);
+    });
+
+    // Revisar archivos en bloques dinámicos
+    const bloquesDinamicos = document.querySelectorAll('.bloque-adjuntos-dinamico');
+    bloquesDinamicos.forEach(bloque => {
+        const lineas = bloque.querySelectorAll('.linea-bloque-adjunto');
+        lineas.forEach(linea => {
+            const cc = linea.querySelector('.select-cc-asociado')?.value?.trim() || '';
+            const archivo = linea.querySelector('.input-url-doc')?.value?.trim() || '';
+            if (cc && archivo && mapaCC.has(cc)) {
+                mapaCC.set(cc, mapaCC.get(cc) + 1);
+            }
+        });
+    });
+
+    // Revisar archivos en bloques simples
+    const bloquesSimples = document.querySelectorAll('.bloque-archivos-simples');
+    bloquesSimples.forEach(bloque => {
+        const lineas = bloque.querySelectorAll('.linea-bloque-archivo');
+        lineas.forEach(linea => {
+            const cc = linea.querySelector('.select-cc-asociado')?.value?.trim() || '';
+            const archivo = linea.querySelector('.input-url-archivo')?.value?.trim() || '';
+            if (cc && archivo && mapaCC.has(cc)) {
+                mapaCC.set(cc, mapaCC.get(cc) + 1);
+            }
+        });
+    });
+
+    // Validar que todos los CC tengan al menos un archivo
+    const faltantes = [];
+    mapaCC.forEach((cantidad, clave) => {
+        if (cantidad === 0) {
+            const [idCentro, idEmpresa] = clave.split('___');
+            const ccObj = lista.find(item => item.idCentroCosto === idCentro && item.idEmpresa === idEmpresa);
+            if (ccObj) {
+                faltantes.push(`${ccObj.nombreCentro} <${ccObj.nombreEmpresa}>`);
+            }
+        }
+    });
+
+    if (faltantes.length > 0) {
+        Swal.fire({
+            icon: 'error',
+            title: 'Archivos requeridos',
+            html: `Debe asociar al menos un archivo a cada centro de costo:<br/><br/>${faltantes.map(f => `<li>${f}</li>`).join('')}`
+        });
+        return false;
+    }
+
+    return true;
+}
+
+/////////////////////////////////////////////////////////////// GUARDADO DE CAMPOS ///////////////////////////////////////////////////////////////
+
+
+/////////////////////////////////////////////////////////////// RENDER TICKET PADRE ///////////////////////////////////////////////////////////////
+
+async function cargarDatosTicketPadre(ticketId) {
+    try {
+        const respCampos = await ZEN_QUERY({ id: queryObtenerValoresPadre, parametros: { idTareaServicio: ticketId } });
+        const campos = Array.isArray(respCampos.result) ? respCampos.result : [];
+
+        const respDistribucion = await ZEN_QUERY({ id: queryObtenerValoresDistribucion, parametros: { id_tarea_servicio: ticketId } });
+        const distribuciones = Array.isArray(respDistribucion.result) ? respDistribucion.result : [];
+
+        const distribucionesValidas = distribuciones.filter(d => d.nombre_centro !== 'Sin distribución');
+        const empresas = [...new Set(distribucionesValidas.map(d => d.nombre_empresa))];
+
+        let contenido = `<strong>Datos originales solicitud N° ${ticketId}</strong><br/><br/>`;
+
+        if (empresas.length > 0) {
+            contenido += `Empresa(s): ${empresas.join(' | ')}<br/><br/>`;
+        }
+
+        if (campos.length > 0) {
+            contenido += `<ul>`;
+            for (let campo of campos) {
+                const etiqueta = campo.etiqueta || 'Campo';
+                const valor = campo.valor_mostrado || campo.valor || '';
+
+                if (valor === '__DISTRIBUCION_CC__') continue;
+
+                if (valor.includes(':::')) {
+                    const [nombreArchivo, urlArchivo] = valor.split(':::');
+                    if (urlArchivo?.startsWith('http')) {
+                        contenido += `
+                        <li style="margin-bottom: 8px;">
+                            <strong>${etiqueta}:</strong>
+                            <a href="${urlArchivo}" target="_blank"  
+                            style="color: #0a5d6b; text-decoration: none; font-weight: 500; margin-left: 6px; pointer-events: auto; cursor: pointer;">
+                            <i class="fa fa-paperclip" style="margin-right: 4px;"></i> ${nombreArchivo}
+                            </a>
+                        </li>`;
+                        continue;
+                    }
+                }
+
+                if (etiqueta.toLowerCase().includes('adjunto') && valor.startsWith('http')) {
+                    contenido += `<li><strong>${etiqueta}:</strong> <a href="${valor}" target="_blank" style="color: #0066cc; text-decoration: underline;">Ver archivo</a></li>`;
+                } else {
+                    contenido += `<li><strong>${etiqueta}:</strong> ${valor}</li>`;
+                }
+            }
+            contenido += `</ul>`;
+        }
+
+        if (distribucionesValidas.length > 0) {
+            contenido += `<br/><strong>Distribución del monto total:</strong><br/>`;
+            distribucionesValidas.forEach(d => {
+                contenido += `${d.nombre_empresa} — ${d.nombre_centro}: $ ${parseFloat(d.monto).toLocaleString('es-CL')} | ${d.porcentaje}%<br/>`;
+            });
+        }
+
+        await waitForEditorReady('descripcion');
+        const editor = tinymce.get('descripcion');
+        if (editor) {
+            editor.setContent(contenido);
+            editor.getBody().setAttribute('contenteditable', false);
+            editor.getBody().style.pointerEvents = 'auto';
+
+            const links = editor.getBody().querySelectorAll('a');
+            links.forEach(link => {
+                link.style.cursor = 'pointer';
+                link.setAttribute('target', '_blank');
+            });
+        }
+    } catch (error) {
+        console.error('Error al cargar datos del ticket padre:', error);
+    }
+}
+
+function waitForEditorReady(selectorId) {
+    return new Promise((resolve) => {
+        const check = () => {
+            const editor = tinymce.get(selectorId);
+            if (editor && editor.initialized) {
+                resolve();
+            } else {
+                setTimeout(check, 100);
+            }
+        };
+        check();
+    });
+}
+
+async function cargarMontoAclarado(ticketPadre) {
+    try {
+        const resp = await ZEN_QUERY({
+            id: 312,
+            parametros: { id_ticket: ticketPadre }
+        });
+
+        const registro = Array.isArray(resp.result) && resp.result.length > 0 ? resp.result[0] : null;
+        if (!registro) return;
+
+        await esperarCampoMonto();
+
+        const wrapper = document.querySelector(
+            '.campo-personalizado[data-nombre-interno="monto_aclarar"], .campo-personalizado[data-nombre-interno="monto_pagar"]'
+        );
+
+        if (!wrapper) return;
+
+        const input = wrapper.querySelector('input[type="number"], input');
+        if (input) {
+            input.value = registro.monto_aclarar;
+            input.setAttribute('readonly', true);
+        }
+
+    } catch (error) {
+        console.error('Error al cargar monto aclarado del ticket padre:', error);
+    }
+}
+
+function esperarCampoMonto() {
+    return new Promise(resolve => {
+        const check = () => {
+            const exists = document.querySelector(
+                '.campo-personalizado[data-nombre-interno="monto_aclarar"], .campo-personalizado[data-nombre-interno="monto_pagar"]'
+            );
+            if (exists) {
+                resolve();
+            } else {
+                setTimeout(check, 200);
+            }
+        };
+        check();
+    });
+}
+
+/////////////////////////////////////////////////////////////// RENDER TICKET PADRE ///////////////////////////////////////////////////////////////
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+async function precargarValoresEditados() {
+    if (!Array.isArray(window.datosTicketEditado)) return;
+
+    const datos = window.datosTicketEditado;
+
+    // === 1. CAMPOS PERSONALIZADOS ===
+    datos.filter(d => d.tipo === 'campo_personalizado').forEach(campo => {
+        const wrapper = document.querySelector(`.campo-personalizado[data-campo-id="${campo.id_campo}"]`);
+        if (!wrapper) return;
+
+        const tipoCampo = parseInt(campo.id_tipo_campo);
+        const valor = campo.valor;
+
+        if (campo.nombre_interno === 'documento_adjunto') return;
+
+        if (tipoCampo === 1 || tipoCampo === 2 || tipoCampo === 7) {
+            const input = wrapper.querySelector('input');
+            if (input) input.value = valor;
+        }
+
+        if (tipoCampo === 8) {
+            const select = wrapper.querySelector('select');
+            if (select) select.value = valor;
+        }
+
+        if (tipoCampo === 6) {
+            const textarea = wrapper.querySelector('textarea');
+            if (textarea) textarea.value = valor;
+        }
+
+        if ([4, 5].includes(tipoCampo)) {
+            const opciones = wrapper.querySelectorAll('input');
+            opciones.forEach(op => {
+                if (valor.split(',').includes(op.value)) op.checked = true;
+            });
+        }
+    });
+
+    // === 2. DISTRIBUCIÓN CC ===
+    const distribuciones = datos.filter(d => d.tipo === 'distribucion_cc');
+    if (distribuciones.length > 0) {
+        await esperarDistribucionesRenderizadas();
+        const bloques = document.querySelectorAll('.bloque-empresa-cc');
+
+        distribuciones.forEach(d => {
+            const [empresa_cc, monto, porcentaje] = d.valor.split(':::');
+            const [empresaId, centroCostoId] = empresa_cc.split('___');
+
+            for (let bloque of bloques) {
+                const selectEmpresa = bloque.querySelector('.select-empresa');
+                if (!selectEmpresa || selectEmpresa.value !== empresaId) continue;
+
+                const selectCC = bloque.querySelector('.select-centro-costo');
+
+                if (selectCC && selectCC.value === centroCostoId) {
+                    const inputMonto = bloque.querySelector('.input-monto-directo');
+                    if (inputMonto) {
+                        inputMonto.value = parseFloat(monto || 0);
+                        break;
+                    }
+                }
+
+                if (selectCC && selectCC.value === '__DISTRIBUCION_CC__') {
+                    const tabla = bloque.querySelector('.tabla-distribucion-cc');
+                    const btnAgregar = bloque.querySelector('.bloque-distribucion-cc .btn');
+
+                    if (tabla && btnAgregar) {
+                        btnAgregar.click(); // agrega línea
+                        const ultima = tabla.lastElementChild;
+                        const sel = ultima.querySelector('.sel-cc-linea');
+                        const inp = ultima.querySelector('.input-monto-linea');
+
+                        if (sel && inp) {
+                            sel.value = centroCostoId;
+                            inp.value = parseFloat(monto || 0);
+                        }
+                    }
+                }
+            }
+        });
+
+        actualizarTotalGeneral();
+        actualizarSelectoresCC();
+    }
+
+    // === 3. FECHA DE COMPROMISO ===
+    const fecha = datos.find(d => d.tipo === 'fecha_compromiso');
+    if (fecha) {
+        const wrapper = document.querySelector('.campo-personalizado[data-nombre-interno="fecha_compromiso"]');
+        const input = wrapper?.querySelector('input[type="date"]');
+        if (input) input.value = fecha.valor;
+    }
+
+    // === 4. FORMA DE PAGO ===
+    const metodo = datos.find(d => d.tipo === 'forma_pago');
+    if (metodo) {
+        const wrapper = document.querySelector('.campo-personalizado[data-nombre-interno="metodo_pago"]');
+        const select = wrapper?.querySelector('select');
+        if (select) select.value = metodo.valor;
+    }
+}
+
+function esperarDistribucionesRenderizadas() {
+    return new Promise(resolve => {
+        const check = () => {
+            const bloque = document.querySelector('.bloque-empresa-cc');
+            if (bloque) resolve();
+            else setTimeout(check, 100);
+        };
+        check();
+    });
+}
+
+async function preCargarDistribucionDesdeEdicion() {
+    const data = Array.isArray(window.datosTicketEditado) ? window.datosTicketEditado : [];
+    const distros = data.filter(d => d.tipo === 'distribucion_cc');
+
+    if (distros.length === 0) return;
+
+    const grupos = {};
+
+    for (let item of distros) {
+        const [empCC, monto, porcentaje] = item.valor.split(':::');
+        const [idEmpresa, idCentro] = empCC.split('___');
+
+        if (!grupos[idEmpresa]) grupos[idEmpresa] = [];
+
+        grupos[idEmpresa].push({
+            idCentroCosto: idCentro,
+            monto: parseFloat(monto),
+            porcentaje: parseFloat(porcentaje),
+            label: item.label,
+            idEmpresa: idEmpresa
+        });
+    }
+
+    const wrapperGlobal = document.querySelector('.wrapper-multi-empresas');
+    if (!wrapperGlobal) return;
+
+    for (let idEmpresa in grupos) {
+        const items = grupos[idEmpresa];
+
+        const isDistribucion = items.length > 1;
+
+        await insertarBloqueEmpresa(wrapperGlobal);
+        const bloque = wrapperGlobal.querySelectorAll('.bloque-empresa-cc');
+        const ultimoBloque = bloque[bloque.length - 1];
+
+        const selectEmpresa = ultimoBloque.querySelector('.select-empresa');
+        const selectCC = ultimoBloque.querySelector('.select-centro-costo');
+        const inputMonto = ultimoBloque.querySelector('.input-monto-directo');
+        const divDistrib = ultimoBloque.querySelector('.bloque-distribucion-cc');
+        const tablaDistrib = ultimoBloque.querySelector('.tabla-distribucion-cc');
+        const totalDistrib = ultimoBloque.querySelector('.total-distribucion');
+
+        selectEmpresa.value = idEmpresa;
+        selectEmpresa.dispatchEvent(new Event('change'));
+
+        await new Promise(r => setTimeout(r, 300));
+
+        if (isDistribucion) {
+            selectCC.value = '__DISTRIBUCION_CC__';
+            selectCC.dispatchEvent(new Event('change'));
+
+            for (let linea of items) {
+                const btnAgregar = divDistrib.querySelector('.btn-verde-institucional');
+                if (btnAgregar) btnAgregar.click();
+
+                await new Promise(r => setTimeout(r, 100));
+
+                const lineas = tablaDistrib.querySelectorAll('.linea-distribucion');
+                const ultima = lineas[lineas.length - 1];
+
+                const selCC = ultima.querySelector('select.sel-cc-linea');
+                const inpMonto = ultima.querySelector('input.input-monto-linea');
+
+                selCC.value = linea.idCentroCosto;
+                selCC.dispatchEvent(new Event('change'));
+
+                inpMonto.value = linea.monto;
+                inpMonto.dispatchEvent(new Event('input'));
+            }
+
+            const total = items.reduce((acc, it) => acc + it.monto, 0);
+            totalDistrib.innerText = `$${total.toLocaleString('es-CL', { minimumFractionDigits: 0 })}`;
+
+        } else {
+            const item = items[0];
+            selectCC.value = item.idCentroCosto;
+            selectCC.dispatchEvent(new Event('change'));
+
+            inputMonto.value = item.monto;
+            inputMonto.dispatchEvent(new Event('input'));
+        }
+    }
+
+    const bloquesPrecargados = document.querySelectorAll('.bloque-empresa-cc');
+    if (bloquesPrecargados.length > 1) {
+        const primerBloque = bloquesPrecargados[0];
+        const empresaVal = primerBloque.querySelector('.select-empresa')?.value;
+        const ccVal = primerBloque.querySelector('.select-centro-costo')?.value;
+        const montoVal = primerBloque.querySelector('.input-monto-directo')?.value;
+
+        const sinDatos = !empresaVal && !ccVal && !montoVal;
+        if (sinDatos) {
+            primerBloque.closest('.col-12.mb-3')?.remove();
+        }
+    }
+
+    actualizarTotalGeneral();
+    actualizarSelectoresCC();
+}
+
+async function preCargarAdjuntosDesdeEdicion() {
+    if (!Array.isArray(window.datosTicketEditado)) return;
+
+    const adjuntos = window.datosTicketEditado.filter(item =>
+        item.tipo === 'campo_personalizado' &&
+        item.nombre_interno === 'documento_adjunto' &&
+        item.valor?.includes(':::')
+    );
+
+    if (adjuntos.length === 0) return;
+
+    const agrupadosPorPlantilla = {};
+    adjuntos.forEach(ad => {
+        const idPlantilla = ad.id_plantilla_tarea;
+        if (!agrupadosPorPlantilla[idPlantilla]) {
+            agrupadosPorPlantilla[idPlantilla] = [];
+        }
+        agrupadosPorPlantilla[idPlantilla].push(ad);
+    });
+
+    for (const [plantillaId, adjuntosPlantilla] of Object.entries(agrupadosPorPlantilla)) {
+        const bloqueTarea = document.querySelector(`.bloque-tarea[data-plantilla-id="${plantillaId}"]`);
+        if (!bloqueTarea) continue;
+
+        const wrapperDinamico = bloqueTarea.querySelector('.bloque-adjuntos-dinamico');
+        const wrapperSimple = bloqueTarea.querySelector('.bloque-archivos-simples');
+
+        if (wrapperDinamico) {
+            const contenedorLineas = wrapperDinamico.querySelector('[id^="contenedor_lineas_"]');
+            if (!contenedorLineas) continue;
+
+            contenedorLineas.innerHTML = '';
+
+            for (const ad of adjuntosPlantilla) {
+                const [tipoDoc, url, cc] = ad.valor.split(':::');
+
+                const linea = document.createElement('div');
+                linea.className = 'row mb-2 linea-bloque-adjunto align-items-center';
+                linea.innerHTML = `
+                    <div class="col-md-4">
+                        <select class="form-control form-control-sm select-tipo-doc">
+                            <option value="">-- Tipo de documento --</option>
+                        </select>
+                    </div>
+                    <div class="col-md-4">
+                        <select class="form-control form-control-sm select-cc-asociado">
+                            <option value="">-- Asociar a CC --</option>
+                        </select>
+                    </div>
+                    <div class="col-md-3 d-flex align-items-center">
+                        <a href="${url}" target="_blank" class="nombre-archivo" style="font-size: 0.85rem;">${decodeURIComponent(url.split('/').pop())}</a>
+                        <input type="hidden" class="input-url-doc" value="${url}" />
+                    </div>
+                    <div class="col-md-1 text-end">
+                        <button type="button" class="btn btn-sm btn-danger btnEliminarLinea"><i class="fa fa-trash"></i></button>
+                    </div>
+                `;
+
+                contenedorLineas.appendChild(linea);
+
+                const selTipo = linea.querySelector('.select-tipo-doc');
+                const selCC = linea.querySelector('.select-cc-asociado');
+                const btnEliminar = linea.querySelector('.btnEliminarLinea');
+
+                const campoTipoDoc = window.camposPlantillaActual?.find(c =>
+                    c.id_plantilla_tarea == plantillaId && c.nombre_interno === 'tipo_documento'
+                );
+                if (campoTipoDoc) {
+                    const resp = await ZEN_QUERY({ id: queryOpcionesCampo, parametros: { id_plantilla_campo: campoTipoDoc.id } });
+                    const opciones = Array.isArray(resp.result) ? resp.result : [];
+                    opciones.forEach(op => {
+                        const opt = document.createElement('option');
+                        opt.value = op.valor_opcion;
+                        opt.textContent = op.etiqueta_opcion;
+                        if (op.valor_opcion === tipoDoc) opt.selected = true;
+                        selTipo.appendChild(opt);
+                    });
+                }
+
+                const lista = window.listaCCSolicitud || [];
+                lista.forEach(ccObj => {
+                    const value = `${ccObj.idCentroCosto}___${ccObj.idEmpresa}`;
+                    const label = `${ccObj.nombreCentro} <${ccObj.nombreEmpresa}>`;
+                    const opt = document.createElement('option');
+                    opt.value = value;
+                    opt.textContent = label;
+                    if (value === cc) opt.selected = true;
+                    selCC.appendChild(opt);
+                });
+
+                btnEliminar.addEventListener('click', () => {
+                    linea.remove();
+                });
+            }
+
+        } else if (wrapperSimple) {
+            const contenedorLineas = wrapperSimple.querySelector('[id^="contenedor_lineas_"]');
+            if (!contenedorLineas) continue;
+
+            contenedorLineas.innerHTML = '';
+
+            for (const ad of adjuntosPlantilla) {
+                const [nombre, url, cc] = ad.valor.split(':::');
+
+                const linea = document.createElement('div');
+                linea.className = 'row mb-2 linea-bloque-archivo align-items-center';
+                linea.innerHTML = `
+                    <div class="col-md-4">
+                        <select class="form-control form-control-sm select-cc-asociado">
+                            <option value="">-- Asociar a CC --</option>
+                        </select>
+                    </div>
+                    <div class="col-md-6 d-flex align-items-center">
+                        <a href="${url}" target="_blank" class="nombre-archivo" style="font-size: 0.85rem;">${nombre}</a>
+                        <input type="hidden" class="input-url-archivo" value="${url}" />
+                    </div>
+                    <div class="col-md-2 text-end">
+                        <button type="button" class="btn btn-sm btn-danger btnEliminarLinea"><i class="fa fa-trash"></i></button>
+                    </div>
+                `;
+
+                contenedorLineas.appendChild(linea);
+
+                const selCC = linea.querySelector('.select-cc-asociado');
+                const lista = window.listaCCSolicitud || [];
+                lista.forEach(ccObj => {
+                    const value = `${ccObj.idCentroCosto}___${ccObj.idEmpresa}`;
+                    const label = `${ccObj.nombreCentro} <${ccObj.nombreEmpresa}>`;
+                    const opt = document.createElement('option');
+                    opt.value = value;
+                    opt.textContent = label;
+                    if (value === cc) opt.selected = true;
+                    selCC.appendChild(opt);
+                });
+
+                linea.querySelector('.btnEliminarLinea').addEventListener('click', () => {
+                    linea.remove();
+                });
+            }
+        }
+    }
+}
+
+function preCargarMetodoPagoDesdeEdicion() {
+    if (!window.datosTicketEditado || !Array.isArray(window.datosTicketEditado)) return;
+
+    const registro = window.datosTicketEditado.find(campo => campo.tipo === 'forma_pago');
+    if (!registro || !registro.valor) return;
+
+    const valor = registro.valor.toUpperCase();
+
+    const checkExist = setInterval(() => {
+        const wrapper = document.querySelector('.campo-personalizado[data-nombre-interno="metodo_pago"]');
+        if (wrapper) {
+            const radios = wrapper.querySelectorAll('input[type="radio"]');
+            if (radios.length > 0) {
+                radios.forEach(radio => {
+                    if (radio.value.toUpperCase() === valor) {
+                        radio.checked = true;
+                    }
+                });
+                clearInterval(checkExist);
+            }
+        }
+    }, 300);
+}
+
+/////////////////////////////////////////////////////////////// GUARDADO DE CAMPOS ///////////////////////////////////////////////////////////////
