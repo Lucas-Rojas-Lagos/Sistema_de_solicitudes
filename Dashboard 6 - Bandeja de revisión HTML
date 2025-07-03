@@ -1,0 +1,123 @@
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<link href="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
+
+<div id="SE51679706" class="container-fluid" edrag="01" elecod="PC_01" style="margin-top:-15px;">
+  <div id="row-top-1" class="row" edrag="01" elecod="PC_03" style="">
+    <div id="SE53223575" class="col-sm-12 col-md-3 columna-centrada" edrag="04" elecod="PC_04" style="">
+      <button id="filtrar" type="button" class="btn btn-light" edrag="00" elecod="PC_15"><i class="fa fa-filter tx-18-force">
+        </i></button>
+      <label id="SE70906311" edrag="05" elecod="PC_18" class="col-form-label label-large" style="margin-right:20px;color:white;">Bandeja de revisión</label>
+
+
+    </div>
+    <div id="SE61981606" class="col-sm-12 col-md-7 columna-centrada-derecha" edrag="04" elecod="PC_04" style="">
+      <div class="dropdown">
+        <button id="nuevo" type="button" class="btn btn-light btn-sm dropdown-toggle" edrag="00" elecod="PC_15" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
+          <i class="fa fa-plus-circle tx-18-force" style="margin-right:8px;">
+          </i>Nuevo
+        </button>
+        <div class="dropdown-menu" x-placement="bottom-start"
+          style="position: absolute; transform: translate3d(0px, 31px, 0px); top: 0px; left: 0px; will-change: transform;">
+          <button id="nuevoTicket" class="dropdown-item" type="button" edrag="00" elecod="PC_15">Solicitud</button>
+          <button id="nuevaEmpresa" class="dropdown-item" type="button" edrag="00" elecod="PC_15">Empresa</button>
+          <button id="nuevoContacto" class="dropdown-item" type="button" edrag="00" elecod="PC_15">Socio de negocios</button>
+        </div>
+      </div>
+    </div>
+    <div id="SE9736346" class="col-sm-12 col-md-2 columna-centrada" edrag="04" elecod="PC_04" style="">
+      <div id="buscarTicket_1" edrag="05" elecod="PC_10" class="form-group">
+        <input id="buscarTicket" name="buscarTicket" class="form-control" type="text" placeholder="Buscar..." style="">
+        <i class="fa fa-search" style="position: absolute; right: 25px; top: 50%; transform: translateY(-50%);"></i>
+      </div>
+    </div>
+  </div>
+  <div id="row-top-2" class="row" edrag="01" elecod="PC_03" style="background-color:#f5f7f9;">
+    <div id="SE52348126" class="col-sm-12 col-md-9" edrag="04" elecod="PC_04" style="">
+      <div id="SE67479556" class="row" edrag="01" elecod="PC_03">
+        <div id="columnaCheck" class="col-sm-12 col-md-1 columna-centrada" edrag="04" elecod="PC_04" style="">
+          <div id="checkTodos_C" edrag="05" elecod="PC_16" class="form-check form-check-inline">
+            <input id="checkTodos" class="form-check-input" type="checkbox" value="999999999" name="checkTodos_0">
+            <label id="label_checkTodos" class="form-check-label " for="checkTodos"></label>
+          </div>
+        </div>
+        <div id="columnaOrden" class="col-sm-12 col-md-11 columna-centrada" edrag="04" elecod="PC_04" style="">
+          <div id="SE93843132" class="col-sm-12 col-md-6 columna-centrada" edrag="04" elecod="PC_04" style="">
+            <label id="SE52094726" edrag="05" elecod="PC_18" class="col-form-label">Ordenar por:</label>
+            <div id="ordenarPor_1" edrag="05" elecod="PC_12" class="form-group custom-form-group">
+              <select id="ordenarPor" name="ordenarPor" class="form-control" style="width:300px;">
+              </select>
+            </div>
+          </div>
+          <div id="SE53298485" class="col-sm-12 col-md-6 columna-centrada-derecha" edrag="04" elecod="PC_04" style="">
+            <label id="SE53449411" edrag="05" elecod="PC_18" class="col-form-label">Vista: </label>
+            <div id="vista_1" edrag="05" elecod="PC_12" class="form-group custom-form-group">
+              <select id="vista" name="vista" class="form-control ">
+                                  <option value="lista" selected="">Lista</option>
+                  <option value="kanban">Kanban</option> <!-- Se añade opción Kanban -->
+              </select>
+            </div>
+          </div>
+        </div>
+        <div id="columnaCheckeados" class="col-sm-12 col-md-11 columna-centrada" edrag="04" elecod="PC_04"
+          style="display:none;">
+          <button id="asignar" type="button" class="btn btn-light btn-sm" edrag="00" elecod="PC_15" style=""><i class="fa fa-user-plus">
+            </i> Asignar</button>
+          <button id="cerrar" type="button" class="btn btn-light btn-sm" edrag="00" elecod="PC_15" style=""><i class="fa fa-check">
+            </i> Cerrar</button>
+        </div>
+      </div>
+    </div>
+    <div id="columnasAdicionales" class="col-sm-12 col-md-3 columna-centrada" edrag="04" elecod="PC_04" style="">
+      <div id="SE17569102" class="col-sm-12 col-md-4 columna-centrada" edrag="04" elecod="PC_04" style="">
+        <button id="exportar" type="button" class="btn btn-light btn-sm" edrag="00" elecod="PC_15"><i class="fa fa-file-export">
+          </i> Exportar</button>
+      </div>
+      <div id="SE54187927" class="col-sm-12 col-md-8 columna-centrada-busqueda" edrag="04" elecod="PC_04" style="">
+        <button id="btnAnterior" class="btn-navegacion">
+          <i class="fa fa-chevron-left tx-18-force">
+          </i>
+        </button>
+        <span id="numeroPagina">1</span>
+        <button id="btnSiguiente" class="btn-navegacion">
+          <i class="fa fa-chevron-right tx-18-force">
+          </i>
+        </button>
+      </div>
+    </div>
+  </div>
+  <div id="row-tickets" class="row" edrag="01" elecod="PC_03" style="margin-top:10px;">
+    <div id="columnaTickets" class="col-sm-12 col-md-12">
+      <div id="ticket-kanban-view" class="kanban-container" style="display: none;"></div>
+      <div id="ticket-list-view" class="ticket-list-container"></div>
+    </div>
+  </div>
+  <div id="menuLateral" class="menu-lateral">
+    <div class="menu-header">
+      <h4>Filtrar</h4>
+      <button id="cerrarMenu" class="cerrar-menu">×</button>
+    </div>
+    <div class="menu-body">
+      <div class="form-group">
+        <label for="filtroPrioridad">Prioridad</label>
+        <select id="filtroPrioridad" class="form-control">
+        <!-- Opciones se cargarán dinámicamente -->
+      </select>
+      </div>
+      <div class="form-group">
+        <label for="filtroAgente">Agente</label>
+        <select id="filtroAgente" class="form-control">
+        <!-- Opciones se cargarán dinámicamente -->
+      </select>
+      </div>
+      <!-- Puedes añadir más filtros aquí -->
+      <button id="aplicarFiltros" class="btn btn-primary">Aplicar filtros</button>
+    </div>
+  </div>
+</div>
+<div id="empresaIframeContainer" class="iframe-container">
+  <iframe id="empresaIframe" class="iframe"></iframe>
+</div>
+<div id="contactoIframeContainer" class="iframe-container">
+  <iframe id="contactoIframe" class="iframe"></iframe>
+</div>
