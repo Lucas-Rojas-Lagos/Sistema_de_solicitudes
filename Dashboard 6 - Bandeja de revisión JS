@@ -1,0 +1,759 @@
+/////////////////////////////////////////////////////////////// PARÁMETROS E INICIALIZACIÓN ///////////////////////////////////////////////////////////////
+
+const queryObtenerTickets = 50;
+const queryEstadosTickets = 147;
+let ticketsPorPagina = 10;
+let paginaActual = 1;
+let ticketsExport = [];
+
+const idUsuario = parseInt(ZEN_CONNECT.user.id);
+const roles = parseInt(ZEN_CONNECT.roles[0]?.role_id);
+
+document.addEventListener('DOMContentLoaded', (event) => {
+
+    let tickets = [];
+    let estados = [];
+    let filtrosAplicados = { orden: 'fechaReciente' };
+
+    /////////////////////////////////////////////////////////////// PARÁMETROS E INICIALIZACIÓN  ///////////////////////////////////////////////////////////////
+
+
+    /////////////////////////////////////////////////////////////// FUNCIONALIDADES DE CHECK  ///////////////////////////////////////////////////////////////
+
+    const checkTodos = document.getElementById('checkTodos');
+    const columnaOrden = document.getElementById('columnaOrden');
+    const columnaCheckeados = document.getElementById('columnaCheckeados');
+    const columnaTickets = document.getElementById('ticket-list-view');
+
+    checkTodos.addEventListener('change', (event) => {
+        if (event.target.checked) {
+            columnaOrden.style.display = 'none';
+            columnaCheckeados.style.display = 'flex';
+        } else {
+            columnaOrden.style.display = 'flex';
+            columnaCheckeados.style.display = 'none';
+        }
+    });
+
+    /////////////////////////////////////////////////////////////// FUNCIONALIDADES DE CHECK  ///////////////////////////////////////////////////////////////
+
+
+    /////////////////////////////////////////////////////////////// PAGINACIÓN Y ORDEN  ///////////////////////////////////////////////////////////////
+
+    const ordenarPorSelect = document.getElementById('ordenarPor');
+
+    const opcionesOrdenar = [
+        { text: 'Fecha más reciente', value: 'fechaReciente' },
+        { text: 'Fecha más antigua', value: 'fechaAntigua' },
+        { text: 'Prioridad más alta', value: 'prioridadAlta' },
+        { text: 'Prioridad más baja', value: 'prioridadBaja' },
+        { text: 'Etapa (Alfabético)', value: 'etapa' },
+        { text: 'Agente asignado (Alfabético)', value: 'agente' }
+    ];
+
+    opcionesOrdenar.forEach(opcion => {
+        const opt = document.createElement('option');
+        opt.value = opcion.value;
+        opt.textContent = opcion.text;
+        ordenarPorSelect.appendChild(opt);
+    });
+
+    ordenarPorSelect.value = 'fechaReciente';
+
+    function ordenarTickets(tickets, criterio) {
+        switch (criterio) {
+            case 'fechaReciente':
+                return tickets.sort((a, b) => new Date(b.create) - new Date(a.create));
+            case 'fechaAntigua':
+                return tickets.sort((a, b) => new Date(a.create) - new Date(b.create));
+            case 'prioridadAlta':
+                return tickets.sort((a, b) => {
+                    const prioridadValores = { 'Alta': 1, 'Media': 2, 'Baja': 3 };
+                    return prioridadValores[a.prioridad] - prioridadValores[b.prioridad];
+                });
+            case 'prioridadBaja':
+                return tickets.sort((a, b) => {
+                    const prioridadValores = { 'Alta': 1, 'Media': 2, 'Baja': 3 };
+                    return prioridadValores[b.prioridad] - prioridadValores[a.prioridad];
+                });
+            case 'etapa':
+                return tickets.sort((a, b) => a.etapa.localeCompare(b.etapa));
+            case 'agente':
+                return tickets.sort((a, b) => a.agente.localeCompare(b.agente));
+            default:
+                return tickets;
+        }
+    }
+
+    function aplicarFiltrosYOrdenar() {
+        if (!tickets || !Array.isArray(tickets)) {
+            console.warn("No hay tickets para filtrar.");
+            return;
+        }
+
+        let ticketsFiltrados = [...tickets];
+        ticketsExport = ticketsFiltrados;
+
+        const prioridadSeleccionada = document.getElementById('filtroPrioridad').value;
+        const agenteSeleccionado = document.getElementById('filtroAgente').value;
+        const criterioOrdenamiento = document.getElementById('ordenarPor').value;
+
+        if (prioridadSeleccionada) {
+            ticketsFiltrados = ticketsFiltrados.filter(ticket => ticket.prioridad === prioridadSeleccionada);
+        }
+
+        if (agenteSeleccionado) {
+            ticketsFiltrados = ticketsFiltrados.filter(ticket => ticket.agente === agenteSeleccionado);
+        }
+
+        const stepsSeleccionados = $('#filtroEstado').val()?.map(Number) || [];
+
+        if (stepsSeleccionados.length > 0) {
+            ticketsFiltrados = ticketsFiltrados.filter(ticket =>
+                stepsSeleccionados.includes(Number(ticket.step_id))
+            );
+        }
+
+        if (criterioOrdenamiento) {
+            ticketsFiltrados = ordenarTickets(ticketsFiltrados, criterioOrdenamiento);
+        }
+
+        const totalPaginas = Math.ceil(ticketsFiltrados.length / ticketsPorPagina);
+        if (paginaActual > totalPaginas) {
+            paginaActual = totalPaginas > 0 ? totalPaginas : 1; // Evita errores en última página
+        }
+
+        const inicio = (paginaActual - 1) * ticketsPorPagina;
+        const fin = inicio + ticketsPorPagina;
+        const ticketsPaginados = ticketsFiltrados.slice(inicio, fin);
+
+        actualizarVista(ticketsPaginados);
+        actualizarPaginacion(ticketsFiltrados);
+    }
+
+    function actualizarVista(ticketsFiltrados) {
+        const vistaSeleccionada = document.getElementById('vista').value;
+        const listaView = document.getElementById('ticket-list-view');
+        const kanbanView = document.getElementById('ticket-kanban-view');
+
+        if (vistaSeleccionada === 'kanban') {
+            listaView.style.display = 'none';
+            kanbanView.style.display = 'flex';
+            createKanbanView(ticketsFiltrados);
+        } else {
+            listaView.style.display = 'block';
+            kanbanView.style.display = 'none';
+            renderizarTickets(ticketsFiltrados);
+        }
+
+
+    }
+
+    document.addEventListener('DOMContentLoaded', () => {
+        const aplicarFiltrosBtn = document.getElementById('aplicarFiltros');
+        if (aplicarFiltrosBtn) {
+            aplicarFiltrosBtn.addEventListener('click', aplicarFiltrosYOrdenar);
+        }
+
+        const vistaSelect = document.getElementById('vista');
+        if (vistaSelect) {
+            vistaSelect.addEventListener('change', (event) => {
+                alternarVista(event.target.value);
+            });
+        }
+
+        const ordenarPorSelect = document.getElementById('ordenarPor');
+        if (ordenarPorSelect) {
+            ordenarPorSelect.addEventListener('change', aplicarFiltrosYOrdenar);
+        }
+
+        const filtroPrioridad = document.getElementById('filtroPrioridad');
+        const filtroAgente = document.getElementById('filtroAgente');
+        const filtroEstado = document.getElementById('filtroEstado');
+
+        [filtroPrioridad, filtroAgente, filtroEstado].forEach(filtro => {
+            if (filtro) {
+                filtro.addEventListener('change', () => {
+                    aplicarFiltrosYOrdenar();
+                });
+            }
+        });
+
+        Promise.all([
+            ZEN_QUERY({ id: queryObtenerTickets, parametros: { roleId: roles, idUsuario: idUsuario } }),
+            ZEN_QUERY({ id: queryEstadosTickets })
+        ])
+            .then(([ticketsResult, estadosResult]) => {
+                tickets = ticketsResult.result || [];
+                estados = estadosResult.result || [];
+                cargarFiltros(tickets);
+                aplicarFiltrosYOrdenar();
+            })
+            .catch(err => console.error("? Error al obtener datos:", err));
+    });
+
+    /////////////////////////////////////////////////////////////// PAGINACIÓN Y ORDEN  ///////////////////////////////////////////////////////////////
+
+
+    /////////////////////////////////////////////////////////////// RENDERIZAR TICKETS  ///////////////////////////////////////////////////////////////
+
+    function renderizarTickets(tickets) {
+        columnaTickets.innerHTML = '';
+
+        tickets.forEach(ticket => {
+            if (ticket.apadrinamiento_status === 'Apadrinado') {
+                return;
+            }
+
+            const ticketContainer = document.createElement('div');
+            ticketContainer.className = 'ticket-container';
+
+            const checkCol = document.createElement('div');
+            checkCol.className = 'ticket-column';
+            checkCol.id = 'check-column';
+            const checkbox = document.createElement('input');
+            checkbox.type = 'checkbox';
+            checkbox.className = 'ticket-checkbox';
+
+            checkbox.addEventListener('change', (event) => {
+                actualizarSeleccion(ticket, event.target.checked);
+                toggleColumnaCheckeados();
+            });
+
+            checkCol.appendChild(checkbox);
+
+            const logoCol = document.createElement('div');
+            logoCol.className = 'ticket-column';
+            logoCol.id = 'logo-column';
+            const logo = document.createElement('img');
+
+            const base64PrefixPattern = /^data:image\/(png|jpeg|jpg|gif|bmp|webp);base64,/;
+            let logoSrc;
+
+            if (ticket.logo && ticket.logo.trim() !== '') {
+                logoSrc = base64PrefixPattern.test(ticket.logo) ? ticket.logo : 'data:image/png;base64,' + ticket.logo;
+            } else {
+                logoSrc = logoDefecto;
+            }
+
+            logo.src = logoSrc;
+            logo.className = 'ticket-logo';
+            logoCol.appendChild(logo);
+
+            const infoCol = document.createElement('div');
+            infoCol.className = 'ticket-column';
+            infoCol.id = 'info-column';
+
+            const idYEtapa = document.createElement('p');
+            idYEtapa.style.margin = '0';
+            idYEtapa.style.lineHeight = '1.2';
+            idYEtapa.style.display = 'inline-flex';
+            idYEtapa.style.alignItems = 'center';
+            idYEtapa.style.gap = '8px';
+            idYEtapa.className = 'id-etapa-label';
+            idYEtapa.textContent = `${ticket.id_ticket} | ${ticket.etapa}`;
+
+            if (parseInt(ticket.requiere_aclaracion) === 1) {
+                const icono = document.createElement('i');
+                icono.className = 'fa fa-exclamation-circle';
+                icono.title = 'Solicitud requiere aclaración';
+                icono.style.color = '#dc3545';
+                icono.style.fontSize = '14px';
+                idYEtapa.appendChild(icono);
+            }
+
+            const motivo = document.createElement('p');
+            motivo.textContent = `Motivo: ${ticket.motivo}`;
+
+            const originador = document.createElement('p');
+            originador.textContent = `Creado por: ${ticket.originador}`;
+
+            const agente = document.createElement('p');
+            agente.textContent = `Agente asignado: ${ticket.agente}`;
+
+            const fechaCreacion = document.createElement('p');
+            const fecha = convertirStringAFecha(ticket.create);
+            fechaCreacion.textContent = `Fecha de creación: ${formatearFecha(fecha)}`;
+
+            const contacto = document.createElement('p');
+            contacto.textContent = ticket.id_contacto > 0 ? `Usuario asociado: ${ticket.nombre_contacto}` : `Usuario asociado: ${ticket.originador}`;
+
+            infoCol.appendChild(idYEtapa);
+            infoCol.appendChild(motivo);
+            infoCol.appendChild(agente);
+            infoCol.appendChild(originador);
+            infoCol.appendChild(fechaCreacion);
+            infoCol.appendChild(contacto);
+
+            const sentimientoCol = document.createElement('div');
+            sentimientoCol.className = 'ticket-column';
+            sentimientoCol.id = 'sentimiento-column';
+
+            const prioridad = document.createElement('p');
+            prioridad.textContent = `Prioridad: ${ticket.prioridad}`;
+
+            sentimientoCol.appendChild(prioridad);
+
+            const redirectCol = document.createElement('div');
+            redirectCol.className = 'ticket-column';
+            redirectCol.id = 'redirect-column';
+
+            redirectCol.innerHTML = `<i class="fa fa-arrow-right tx-18-force ticket-flecha" id="flecha-${ticket.id}"></i>`;
+            redirectCol.addEventListener('click', () => {
+                window.location.href = `${BASE_URL}station/instance/${ticket.id}`;
+            });
+
+            ticketContainer.appendChild(checkCol);
+            ticketContainer.appendChild(logoCol);
+            ticketContainer.appendChild(infoCol);
+            ticketContainer.appendChild(sentimientoCol);
+            ticketContainer.appendChild(redirectCol);
+
+            columnaTickets.appendChild(ticketContainer);
+
+            if (ticket.apadrinamiento_status === 'Principal') {
+                const expandButton = document.createElement('button');
+                expandButton.className = 'expand-button';
+                expandButton.textContent = '+ Mostrar aclaraciones';
+
+                const apadrinadosContainer = document.createElement('div');
+                apadrinadosContainer.className = 'apadrinados-container';
+                apadrinadosContainer.style.display = 'none';
+
+                tickets
+                    .filter(t => t.apadrinamiento_status === 'Apadrinado' && t.id_ticket_principal === ticket.id_ticket)
+                    .forEach(apadrinado => {
+                        const apadrinadoTicketContainer = document.createElement('div');
+                        apadrinadoTicketContainer.className = 'ticket-container apadrinado';
+                        apadrinadoTicketContainer.style.marginLeft = '20px';
+                        apadrinadoTicketContainer.style.backgroundColor = '#f0f0f0';
+
+                        const apadrinadoCheckCol = checkCol.cloneNode(true);
+                        const apadrinadoLogoCol = logoCol.cloneNode(true);
+                        const apadrinadoInfoCol = infoCol.cloneNode(true);
+                        const apadrinadoSentimientoCol = sentimientoCol.cloneNode(true);
+
+                        const apadrinadoRedirectCol = document.createElement('div');
+                        apadrinadoRedirectCol.className = 'ticket-column';
+                        apadrinadoRedirectCol.id = 'redirect-column';
+
+                        apadrinadoRedirectCol.innerHTML = `<i class="fa fa-arrow-right tx-18-force ticket-flecha"></i>`;
+                        apadrinadoRedirectCol.addEventListener('click', () => {
+                            window.location.href = `${BASE_URL}station/instance/${apadrinado.id}`;
+                        });
+
+                        apadrinadoInfoCol.querySelector('.id-etapa-label').textContent = `${apadrinado.id_ticket} | ${apadrinado.etapa}`;
+                        apadrinadoInfoCol.querySelector('p:nth-of-type(2)').textContent = `Motivo: ${apadrinado.motivo}`;
+                        apadrinadoInfoCol.querySelector('p:nth-of-type(3)').textContent = `Creado por: ${apadrinado.originador}`;
+                        apadrinadoInfoCol.querySelector('p:nth-of-type(4)').textContent = `Agente asignado: ${apadrinado.agente}`;
+                        apadrinadoInfoCol.querySelector('p:nth-of-type(5)').textContent = `Fecha de creación: ${formatearFecha(convertirStringAFecha(apadrinado.create))}`;
+                        apadrinadoInfoCol.querySelector('p:nth-of-type(6)').textContent = apadrinado.id_contacto > 0 ? `Usuario asociado: ${apadrinado.nombre_contacto}` : `Usuario asociado: ${apadrinado.originador}`;
+                        apadrinadoSentimientoCol.querySelector('p').textContent = `Prioridad: ${apadrinado.prioridad}`;
+
+                        apadrinadoTicketContainer.appendChild(apadrinadoCheckCol);
+                        apadrinadoTicketContainer.appendChild(apadrinadoLogoCol);
+                        apadrinadoTicketContainer.appendChild(apadrinadoInfoCol);
+                        apadrinadoTicketContainer.appendChild(apadrinadoSentimientoCol);
+                        apadrinadoTicketContainer.appendChild(apadrinadoRedirectCol);
+
+                        apadrinadosContainer.appendChild(apadrinadoTicketContainer);
+                    });
+
+                expandButton.addEventListener('click', () => {
+                    const isHidden = apadrinadosContainer.style.display === 'none';
+                    apadrinadosContainer.style.display = isHidden ? 'block' : 'none';
+                    expandButton.textContent = isHidden ? '- Ocultar aclaraciones' : '+ Mostrar aclaraciones';
+                });
+
+                expandButton.style.position = 'relative';
+                expandButton.style.top = '-30px';
+                expandButton.style.left = '50%';
+                expandButton.style.transform = 'translateX(-50%)';
+
+                columnaTickets.appendChild(expandButton);
+                columnaTickets.appendChild(apadrinadosContainer);
+            }
+        });
+    }
+
+    ordenarPorSelect.addEventListener('change', (event) => {
+        filtrosAplicados.orden = event.target.value;
+        aplicarFiltrosYOrdenar();
+    });
+
+    ZEN_QUERY({ id: queryObtenerTickets, parametros: { roleId: roles, idUsuario: idUsuario } })
+        .then(function (result) {
+            tickets = result.result;
+            aplicarFiltrosYOrdenar();
+            cargarFiltros(tickets);
+        })
+        .catch(function (err) {
+            console.log(err);
+        });
+
+    ZEN_QUERY({ id: queryEstadosTickets })
+        .then(function (result) {
+            estados = result.result;
+            cargarFiltros(tickets);
+        })
+        .catch(function (err) {
+            console.log(err);
+        });
+
+    /////////////////////////////////////////////////////////////// RENDERIZAR TICKETS  ///////////////////////////////////////////////////////////////
+
+
+    ////////////////////////////////////////////////////////////////// FUNCIONALIDAD DE MENÚ LATERAL DE FILTROS ///////////////////////////////////////////////////////////////////
+
+    const menuLateral = document.getElementById('menuLateral');
+    const filtrarBtn = document.getElementById('filtrar');
+    const cerrarMenuBtn = document.getElementById('cerrarMenu');
+    const filtroPrioridad = document.getElementById('filtroPrioridad');
+    const filtroAgente = document.getElementById('filtroAgente');
+    const filtroEstado = document.createElement('select'); // Crear filtro de estado
+    const aplicarFiltrosBtn = document.getElementById('aplicarFiltros');
+
+    filtroEstado.id = 'filtroEstado';
+    filtroEstado.className = 'form-control';
+    filtroEstado.setAttribute('multiple', 'multiple');
+
+    const estadoFilterContainer = document.createElement('div');
+    estadoFilterContainer.className = 'form-group';
+    const estadoLabel = document.createElement('label');
+    estadoLabel.textContent = 'Estado';
+    estadoFilterContainer.appendChild(estadoLabel);
+    estadoFilterContainer.appendChild(filtroEstado);
+    document.querySelector('.menu-body').insertBefore(estadoFilterContainer, aplicarFiltrosBtn);
+
+    filtrarBtn.addEventListener('click', () => {
+        menuLateral.classList.add('open');
+    });
+
+    cerrarMenuBtn.addEventListener('click', () => {
+        menuLateral.classList.remove('open');
+    });
+
+    function cargarFiltros(tickets) {
+        const prioridades = [...new Set(tickets.map(ticket => ticket.prioridad))];
+        filtroPrioridad.innerHTML = '<option value="">Todas</option>';
+        prioridades.forEach(prioridad => {
+            filtroPrioridad.innerHTML += `<option value="${prioridad}">${prioridad}</option>`;
+        });
+
+        const agentes = [...new Set(tickets.map(ticket => ticket.agente))];
+        filtroAgente.innerHTML = '<option value="">Todos</option>';
+        agentes.forEach(agente => {
+            filtroAgente.innerHTML += `<option value="${agente}">${agente}</option>`;
+        });
+
+        filtroEstado.innerHTML = '';
+        estados
+            .filter(estado => estado.id !== "41") // Ya no excluye el 40
+            .forEach(estado => {
+                const selected = estado.id === "40" ? 'selected' : '';
+                filtroEstado.innerHTML += `<option value="${estado.id}" ${selected}>${estado.etapa}</option>`;
+            });
+
+        $('#filtroEstado').select2({
+            placeholder: 'Filtrar por etapa',
+            allowClear: true,
+            width: '100%'
+        }).on('select2:open', function () {
+            // Select2 ya está activo
+        });
+
+        const preseleccionEstadosPorRol = {
+            9: [109],            // Autorizador
+            10: [110, 115, 117], // Contabilidad
+            11: [112, 113, 117], // Tesorería
+            1: [],               // Admin
+            2: [],               // Admin Ticket
+            8: []                // Solicitante
+        };
+
+        const stepsPorDefecto = preseleccionEstadosPorRol[roles] || [];
+
+        if (stepsPorDefecto.length > 0) {
+            $('#filtroEstado')
+                .val(stepsPorDefecto.map(String))
+                .trigger('change.select2')
+                .trigger('select2:select');
+
+            setTimeout(() => {
+                aplicarFiltrosYOrdenar();
+            }, 100);
+        }
+    }
+
+    aplicarFiltrosBtn.addEventListener('click', () => {
+        aplicarFiltrosYOrdenar();
+    });
+
+    ////////////////////////////////////////////////////////////////// FUNCIONALIDAD DE MENÚ LATERAL DE FILTROS ///////////////////////////////////////////////////////////////////
+
+
+    ////////////////////////////////////////////////////////////////// KANBAN //////////////////////////////////////////////////////////////////////////////////
+
+    async function createKanbanView(ticketsFiltrados) {
+        const kanbanView = document.getElementById('ticket-kanban-view');
+
+        if (!kanbanView) {
+            console.error("? Error: No se encontró el contenedor de Kanban con id 'ticket-kanban-view'.");
+            return Promise.reject("El contenedor de Kanban no existe.");
+        }
+
+        kanbanView.innerHTML = '';
+
+        if (!estados || estados.length === 0) {
+            console.warn("?? Advertencia: No hay etapas definidas.");
+            return Promise.reject("No hay etapas definidas.");
+        }
+
+        const columns = await new Promise((resolve) => {
+            const columnMap = {};
+
+            estados.forEach(estado => {
+                if (!estado.etapa || ["por validar", "rechazado"].includes(estado.etapa.trim().toLowerCase())) {
+                    return;
+                }
+
+                const normalizedStage = estado.etapa.replace(/\s+/g, "-").toLowerCase();
+                const column = document.createElement('div');
+                column.className = 'kanban-column';
+                column.id = `kanban-${normalizedStage}`;
+                column.setAttribute("draggable", false);
+
+                const columnHeader = document.createElement('h2');
+                columnHeader.textContent = estado.etapa;
+                column.appendChild(columnHeader);
+                kanbanView.appendChild(column);
+
+                columnMap[normalizedStage] = column;
+            });
+
+            resolve(columnMap);
+        });
+
+        return new Promise((resolve) => {
+            if (!ticketsFiltrados || ticketsFiltrados.length === 0) {
+                resolve();
+                return;
+            }
+
+            ticketsFiltrados.forEach(ticket => {
+                if (!ticket.etapa || ["por validar", "rechazado"].includes(ticket.etapa.trim().toLowerCase())) {
+                    return;
+                }
+
+                const normalizedStage = ticket.etapa.replace(/\s+/g, "-").toLowerCase();
+                const column = columns[normalizedStage];
+
+                if (column) {
+                    const ticketCard = document.createElement('div');
+                    ticketCard.className = 'kanban-card';
+                    ticketCard.setAttribute("draggable", false);
+
+                    ticketCard.innerHTML = `
+                    <p class="id-etapa-label"> ${ticket.id_ticket}</p>
+                    <h6>${ticket.motivo}</h6>
+                    <p><strong>Creado por:</strong> ${ticket.originador}</p>
+                    <p><strong>Agente:</strong> ${ticket.agente || 'No asignado'}</p>
+                    <p><strong>Fecha:</strong> ${formatearFecha(convertirStringAFecha(ticket.create))}</p>
+                `;
+
+                    ticketCard.addEventListener('click', () => {
+                        window.location.href = `${BASE_URL}station/instance/${ticket.id}`;
+                    });
+
+                    column.appendChild(ticketCard);
+                }
+            });
+
+            resolve();
+        }).then(() => {
+            enableHorizontalScroll(kanbanView);
+        }).catch(error => {
+            console.error("? Error al generar la vista Kanban:", error);
+        });
+    }
+
+    function enableHorizontalScroll(container) {
+        if (!container) {
+            console.error("? Error: El contenedor de Kanban no está disponible para desplazamiento.");
+            return;
+        }
+
+        let isDown = false;
+        let startX;
+        let scrollLeft;
+
+        container.addEventListener('mousedown', (e) => {
+            isDown = true;
+            container.classList.add('active');
+            startX = e.pageX - container.offsetLeft;
+            scrollLeft = container.scrollLeft;
+        });
+
+        container.addEventListener('mouseleave', () => {
+            isDown = false;
+            container.classList.remove('active');
+        });
+
+        container.addEventListener('mouseup', () => {
+            isDown = false;
+            container.classList.remove('active');
+        });
+
+        container.addEventListener('mousemove', (e) => {
+            if (!isDown) return;
+            e.preventDefault();
+            const x = e.pageX - container.offsetLeft;
+            const walk = (x - startX) * 2;
+            container.scrollLeft = scrollLeft - walk;
+        });
+    }
+
+    function alternarVista(vista) {
+        aplicarFiltrosYOrdenar();
+    }
+
+
+    document.addEventListener('DOMContentLoaded', () => {
+        const vistaSelect = document.getElementById('vista');
+
+        if (!vistaSelect) {
+            console.error("? Error: No se encontró el selector de vista.");
+            return;
+        }
+
+        vistaSelect.addEventListener('change', (event) => {
+            alternarVista(event.target.value);
+        });
+
+        vistaSelect.innerHTML = `
+        <option value="lista" selected>Lista</option>
+        <option value="kanban">Kanban</option>
+    `;
+
+        Promise.all([
+            ZEN_QUERY({ id: queryObtenerTickets, parametros: { roleId: roles, idUsuario: idUsuario } }),
+            ZEN_QUERY({ id: queryEstadosTickets })
+        ])
+            .then(([ticketsResult, estadosResult]) => {
+                tickets = ticketsResult.result || [];
+                estados = estadosResult.result || [];
+                alternarVista(vistaSelect.value);
+                cargarFiltros(tickets);
+                aplicarFiltrosYOrdenar();
+
+            })
+            .catch(err => console.error("? Error al obtener datos:", err));
+    });
+
+
+    const vistaSelect = document.getElementById('vista');
+    if (vistaSelect) {
+        vistaSelect.addEventListener('change', (event) => {
+            alternarVista(event.target.value);
+        });
+
+        vistaSelect.innerHTML = `
+        <option value="lista" selected>Lista</option>
+        <option value="kanban">Kanban</option>
+    `;
+    }
+
+    ZEN_QUERY({ id: queryObtenerTickets, parametros: { roleId: roles, idUsuario: idUsuario } })
+
+        .then(function (result) {
+            tickets = result.result || [];
+            alternarVista(vistaSelect.value);
+            cargarFiltros(tickets);
+        })
+        .catch(function (err) {
+            console.error("? Error al obtener tickets:", err);
+        });
+
+    ////////////////////////////////////////////////////////////////// KANBAN //////////////////////////////////////////////////////////////////////////////////
+
+
+    ////////////////////////////////////////////////////////////////// FUNCIONES ADICIONALES ///////////////////////////////////////////////////////////////////
+
+    function convertirStringAFecha(fechaStr) {
+        const [fecha, hora] = fechaStr.split(' ');
+        const [anio, mes, dia] = fecha.split('-');
+        const [hora24, minutos, segundos] = hora.split(':');
+        return new Date(anio, mes - 1, dia, hora24, minutos, segundos);
+    }
+
+    function formatearFecha(fecha) {
+        const opcionesFecha = { weekday: 'short', day: '2-digit', month: 'short', year: 'numeric' };
+        const opcionesHora = { hour: '2-digit', minute: '2-digit', hour12: true };
+
+        const fechaFormateada = fecha.toLocaleDateString('es-ES', opcionesFecha);
+        const horaFormateada = fecha.toLocaleTimeString('es-ES', opcionesHora);
+
+        return `${fechaFormateada} a las ${horaFormateada}`;
+    }
+
+    function actualizarPaginacion(ticketsFiltrados) {
+        const totalPaginas = Math.ceil(ticketsFiltrados.length / ticketsPorPagina);
+
+        if (paginaActual > totalPaginas) {
+            paginaActual = totalPaginas > 0 ? totalPaginas : 1; // Evita páginas inválidas
+        }
+
+        document.getElementById('numeroPagina').textContent = `Página ${paginaActual} de ${totalPaginas}`;
+        document.getElementById('btnAnterior').disabled = paginaActual === 1;
+        document.getElementById('btnSiguiente').disabled = paginaActual >= totalPaginas;
+    }
+    function cambiarPagina(delta) {
+        const totalPaginas = Math.ceil(tickets.length / ticketsPorPagina);
+        const nuevaPagina = paginaActual + delta;
+        if (nuevaPagina >= 1 && nuevaPagina <= totalPaginas) {
+            paginaActual = nuevaPagina;
+            aplicarFiltrosYOrdenar();
+        }
+    }
+
+    document.getElementById('btnAnterior').addEventListener('click', () => cambiarPagina(-1));
+    document.getElementById('btnSiguiente').addEventListener('click', () => cambiarPagina(1));
+
+    ////////////////////////////////////////////////////////////////// FUNCIONES ADICIONALES ///////////////////////////////////////////////////////////////////
+});
+
+/////////////////////////////////////////////////////////////// EXPORTAR EXCEL ///////////////////////////////////////////////////////////////
+
+function exportToExcel() {
+    if (ticketsExport.length === 0) {
+        Swal.fire({
+            icon: 'warning',
+            title: 'Sin datos',
+            text: 'No hay solicitudes para exportar.',
+            confirmButtonText: 'Aceptar'
+        });
+        return;
+    }
+
+    const data = ticketsExport.map(ticketFiltado => ({
+        "Solicitud Id": ticketFiltado.id,
+        "Motivo": ticketFiltado.motivo,
+        "Nombre del Agente": ticketFiltado.agente,
+        "Email": ticketFiltado.contacto_mail,
+        "Encargado": ticketFiltado.encargado,
+        "Etapa": ticketFiltado.etapa,
+        "Empresa": ticketFiltado.empresa,
+        "Prioridad": ticketFiltado.prioridad,
+    }));
+
+    const ws = XLSX.utils.json_to_sheet(data);
+
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, "Solicitudes");
+
+    XLSX.writeFile(wb, "Solicitudes.xlsx");
+}
+
+document.getElementById("exportar").addEventListener("click", exportToExcel);
+
+/////////////////////////////////////////////////////////////// EXPORTAR EXCEL ///////////////////////////////////////////////////////////////
