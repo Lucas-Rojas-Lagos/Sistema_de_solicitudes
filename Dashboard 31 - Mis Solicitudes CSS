@@ -1,0 +1,423 @@
+
+.btn-light {
+  background-color: #e2e6e9 !important;
+}
+
+button {
+  display: flex;
+  align-items: center;
+  background-color: #007BFF;
+  color: white;
+  border: none;
+
+  padding: 10px 20px;
+  border-radius: 5px;
+  cursor: pointer;
+  font-size: 16px;
+  margin-right: 10px;
+  /* Espacio entre botones */
+}
+
+/* Estilos específicos para los botones de editar y eliminar */
+.btn-editar {
+  background-color: #28a745;
+  /* Color verde para editar */
+}
+
+.btn-eliminar {
+  background-color: #dc3545;
+  /* Color rojo para eliminar */
+}
+
+.columna-centrada {
+  display: flex;
+  align-items: center;
+  justify-content: flex-start;
+}
+
+.columna-centrada-busqueda {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.columna-centrada-derecha {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+}
+
+button i .fa-plus-circle {
+  margin-right: 8px;
+}
+
+.label-pequena {}
+
+.label-large {
+  font-size: large;
+  font-weight: 700;
+}
+
+.label-grande {}
+
+
+
+
+
+
+.form-check-inline {
+  margin: 10px !important;
+}
+
+
+#columnaCheck {
+  display: flex;
+  align-items: center;
+  justify-content: flex-start;
+  height: 100%;
+  /* Asegúrate de que el contenedor tenga altura definida */
+}
+
+#checkTodos_C {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.form-check-input {
+  transform: scale(1.5);
+  /* Ajusta el valor para hacer el checkbox más grande */
+  margin: 0;
+  /* Elimina cualquier margen adicional que el checkbox pueda tener */
+}
+
+
+
+#buscarTicket_1 {
+  margin-bottom: 0px;
+}
+
+
+.search-container {
+  position: relative;
+  width: 300px;
+  /* Ajusta el tamaño según sea necesario */
+}
+
+.search-container input {
+  width: 100%;
+  padding: 5px 30px 5px 10px;
+  /* Reduce el padding para hacer el input menos alto */
+  border: 1px solid #ccc;
+  border-radius: 5px;
+  font-size: 16px;
+  outline: none;
+  box-sizing: border-box;
+}
+
+.search-container::before {
+  content: "\f002";
+  /* Código Unicode para el ícono de lupa de Font Awesome */
+  font-family: "Font Awesome 5 Free";
+  font-weight: 900;
+  position: absolute;
+  right: 10px;
+  top: 50%;
+  transform: translateY(-50%);
+  color: #888;
+  /* Color de la lupa */
+  pointer-events: none;
+  /* Para que el ícono no interfiera con la interacción del input */
+}
+
+.custom-form-group {
+  margin-bottom: 0;
+  /* Elimina el margen inferior */
+}
+
+.custom-form-group .form-control {
+  width: 150px;
+  height: 35px !important;
+  padding: 0px 5px 0px 1px;
+  font-size: 14px;
+  /* Ajusta el tamaño de la fuente según sea necesario */
+  box-sizing: border-box;
+  margin-left: 5px;
+}
+
+
+.btn-navegacion {
+  background-color: #e2e6e9;
+  color: black;
+  border: none;
+  padding: 10px;
+  border-radius: 5px;
+  cursor: pointer;
+  font-size: 10px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin: 0 10px;
+}
+
+.btn-navegacion i {
+  font-size: 10px;
+  /* Tamaño del ícono */
+}
+
+#numeroPagina {
+  font-size: 16px;
+  font-weight: normal;
+}
+
+.iframe-container {
+  position: fixed;
+  right: -600px;
+  /* Posición inicial fuera de la vista */
+  top: 60px;
+  width: 600px;
+  height: 100%;
+  background-color: #fff;
+  box-shadow: -2px 0 5px rgba(0, 0, 0, 0.5);
+  transition: right 0.3s ease;
+  z-index: 1000;
+  overflow-y: auto;
+}
+
+/* Estilos para el iframe */
+.iframe {
+  width: 100%;
+  height: 100%;
+  border: none;
+}
+
+
+
+.ticket-container {
+  display: flex;
+  justify-content: space-between;
+  padding: 10px;
+  margin-bottom: 10px;
+  border: 1px solid #ddd;
+  border-radius: 5px;
+  background-color: #fff;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.ticket-column {
+  padding: 5px;
+}
+
+#check-column {
+  flex: 0.5;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+#logo-column {
+  flex: 0.5;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+#info-column {
+  flex: 9;
+}
+
+#sentimiento-column {
+  flex: 2;
+  display: flex;
+  align-items: center;
+}
+
+#redirect-column {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin: -10px;
+  border-bottom-right-radius: 5px;
+  border-top-right-radius: 5px;
+}
+
+#redirect-column:hover {
+  background-color:#f2f2f2;
+  color:black;
+}
+
+
+.ticket-checkbox {
+  margin-right: 10px;
+}
+
+.ticket-logo {
+  width: 50px;
+  height: auto;
+  margin-right: 10px;
+}
+
+.ticket-column p {
+  margin: 5px 0;
+}
+
+.ticket-container:nth-child(even) {
+  background-color: #f9f9f9;
+}
+
+.id-etapa-label {
+  display: inline-block;
+  padding: 5px 10px;
+  border: 1px solid #007866;
+  border-radius: 5px;
+  background-color: #007866;
+  color: #fff;
+  font-size: 14px;
+  text-align: center;
+}
+
+.ticket-flecha{
+    font-size: x-large;
+}
+
+
+
+#SE51679706 {
+  position: relative;
+  min-height: 90vh;
+}
+
+.menu-lateral {
+  position: fixed; /* Fija el menú lateral en la pantalla */
+  top: 60px;
+  left: 0;
+  width: 230px;
+  height: calc(100% - 65px); /* Ajusta la altura para que ocupe el 100% menos el espacio ocupado por el encabezado */
+  background-color: #f5f7f9;
+  box-shadow: 2px 0 5px rgba(0,0,0,0.3);
+  z-index: 1000;
+  padding: 20px;
+  display: none; /* El menú está oculto por defecto */
+  overflow: auto; /* Permite que el contenido del menú lateral tenga un scroll si es necesario */
+}
+
+.menu-lateral h4{
+  margin:0 !important;
+
+}
+
+.menu-lateral.open {
+  display: block;
+}
+
+.menu-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding-bottom: 10px;
+  border-bottom: 1px solid #ddd;
+}
+
+.cerrar-menu {
+  background: none;
+  border: none;
+  font-size: 24px;
+  cursor: pointer;
+  color: black;
+  margin:0 !important;
+}
+
+.menu-body {
+  margin-top: 20px;
+  flex-grow: 1;
+  overflow-y: auto;
+}
+
+#columnaTickets {
+  min-height: 100vh; /* Define una altura mínima para la columna de tickets */
+}
+
+
+#ticket-kanban-view {
+  width: 100%;
+  overflow-x: auto;
+  cursor: grab;
+  user-select: none; /* Evita selección de texto */
+}
+
+#ticket-kanban-view:active {
+  cursor: grabbing;
+}
+
+.kanban-container {
+  display: flex;
+  width: max-content;
+}
+
+.kanban-column {
+  user-select: none;
+  display: flex;
+  flex-direction: column;
+  padding: 10px;
+  margin: 10px;
+  background-color: #f4f5f7;
+  border-radius: 5px;
+  box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+  flex: 1;
+  min-width: 200px;
+}
+
+.kanban-column h2 {
+  text-align: center;
+  color: black;
+  font-size: 16px;
+  font-weight: bold;
+  user-select: none;
+}
+
+.kanban-card {
+  background-color: #fff;
+  padding: 10px;
+  margin-bottom: 10px;
+  border-radius: 3px;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.12), 0 1px 2px rgba(0,0,0,0.24);
+  cursor: pointer;
+  transition: all 0.3s ease;
+  user-select: none; /* Evita selección de texto */
+}
+
+.kanban-card:hover {
+  box-shadow: 0 5px 8px rgba(0,0,0,0.2), 0 3px 4px rgba(0,0,0,0.2);
+}
+
+.kanban-card p{
+
+  margin-bottom: 4px;
+
+}
+
+
+.expand-button {
+  cursor: pointer;
+  padding: 4px 12px;
+  border: 1px solid #007866;
+  background-color: white;
+  color: #007866;
+  border-radius: 20px;
+  font-size: 13px;
+  font-weight: 600;
+  box-shadow: none;
+  transition: background-color 0.2s, color 0.2s;
+}
+
+.expand-button:hover {
+  background-color: #007866;
+  color: white;
+}
+
+
+.apadrinados-container {
+  margin-bottom: 30px;
+  margin-top: 5px;
+}
