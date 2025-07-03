@@ -1,0 +1,101 @@
+<script src="https://cdn.tiny.cloud/1/efvzznjo8nycux9l1nmffhhvyyb2k8ai5w7vlxjtzjahv9cr/tinymce/7/tinymce.min.js"
+    referrerpolicy="origin"></script>
+<script src="https://cdn.jsdelivr.net/npm/sweetalert2@11/dist/sweetalert2.all.min.js"></script>
+<link href="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
+
+
+<div id="SE8875931" class="container-fluid" edrag="01" elecod="PC_01" style="margin-top:-15px;">
+    <div id="row-top-1" class="row" edrag="01" elecod="PC_03">
+        <div id="SE53223575" class="col-sm-12 col-md-3 columna-centrada" edrag="04" elecod="PC_04">
+            <label id="SE70906311" edrag="05" elecod="PC_18" class="col-form-label label-large" style="margin-right:20px;color:white;">
+                Nueva solicitud
+            </label>
+        </div>
+
+        <div id="SE61981606" class="col-sm-12 col-md-7 columna-centrada-derecha" edrag="04" elecod="PC_04">
+            <div class="dropdown">
+                <button id="nuevo" type="button" class="btn btn-light btn-sm dropdown-toggle" edrag="00" elecod="PC_15" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
+          <i class="fa fa-plus-circle tx-18-force" style="margin-right:8px;"></i>Nuevo
+        </button>
+                <div class="dropdown-menu">
+                    <button id="nuevaEmpresa" class="dropdown-item" type="button" edrag="00" elecod="PC_15">Empresa</button>
+                    <button id="nuevoContacto" class="dropdown-item" type="button" edrag="00" elecod="PC_15">Socio de negocios</button>
+                </div>
+            </div>
+        </div>
+
+        <div id="SE9736346" class="col-sm-12 col-md-2 columna-centrada" edrag="04" elecod="PC_04" style="display:none;">
+            <div id="buscarTicket_1" edrag="05" elecod="PC_10" class="form-group">
+                <input id="buscarTicket" name="buscarTicket" class="form-control" type="text" placeholder="Buscar...">
+                <i class="fa fa-search" style="position: absolute; right: 25px; top: 50%; transform: translateY(-50%);"></i>
+            </div>
+        </div>
+    </div>
+
+    <div id="containerCrearTicket" class="container-fluid" edrag="01" elecod="PC_01">
+        <div id="SE68808161" class="row ticket-container" edrag="01" elecod="PC_03">
+            <div id="SE99085574" class="col-sm-12 col-md-12" edrag="04" elecod="PC_04">
+                <div id="SE65779852" class="row" edrag="01" elecod="PC_03">
+
+                    <div id="SE12542472" class="col-sm-12 col-md-12" edrag="04" elecod="PC_04">
+                        <div id="motivo_1" class="form-group" edrag="05" elecod="PC_13">
+                            <label id="label_motivo" class="col-form-label col-form-label-sm">Motivo</label>
+                            <input id="motivo" name="motivo" type="text" class="form-control form-control-sm">
+                        </div>
+                    </div>
+
+                    <div id="SE441925380" class="col-sm-12 col-md-12" edrag="04" elecod="PC_04">
+                        <div class="form-group">
+                            <label for="id_tipo_trabajo">Tipo de solicitud</label>
+                            <select id="id_tipo_trabajo" name="id_tipo_trabajo" class="form-control">
+                                <option value="">-- Seleccione tipo de solicitud --</option>
+                                <!-- Las opciones se cargan dinámicamente, omitiendo ID 33 -->
+                            </select>
+                        </div>
+                    </div>
+
+                    <div id="SE80342987" class="col-sm-12 col-md-12" edrag="04" elecod="PC_04">
+                        <div id="descripcion_1" class="form-group" edrag="05" elecod="PC_13">
+                            <label id="label_descripcion" class="col-form-label col-form-label-sm">Descripción</label>
+                            <input id="descripcion" name="descripcion">
+                        </div>
+                    </div>
+
+                    <div id="SE38643693" class="col-sm-12 col-md-12" edrag="04" elecod="PC_04">
+                        <div id="labelNumeroAdjuntos" class="row" edrag="01" elecod="PC_03"></div>
+                        <div id="containerAdjuntos" class="container-fluid columna-izquierda" edrag="01" elecod="PC_01">
+                        </div>
+                        <div class="mt-2">
+                            <button id="adjuntarArchivo" type="button" class="btn btn-sm" style="width:200px;">
+                                <i class="fa fa-paperclip"></i> Adjuntar archivos
+                            </button>
+                            <input type="file" id="fileInput" class="file-input" accept="image/*,application/pdf" style="display:none;">
+                        </div>
+                    </div>
+
+                    <div class="col-sm-12 col-md-12" edrag="04" elecod="PC_04">
+                        <div id="contenedorTareas"></div>
+                    </div>
+
+                    <div id="SE25614978" class="col-sm-12 col-md-2 columna-centrada mt-3" edrag="04" elecod="PC_04"
+                        style="align-items: flex-end;">
+                        <button id="crearTicket" type="button" class="btn btn-primary btn-block btn-sm" edrag="00" elecod="PC_15" style="flex:1;">Crear</button>
+                    </div>
+
+                    <!-- Campo oculto para detectar si es aclaración -->
+                    <input type="hidden" id="ticket_padre" name="ticket_padre" value="">
+
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Iframes laterales definidos en entorno global, no eliminar -->
+<div id="empresaIframeContainer" class="iframe-container">
+    <iframe id="empresaIframe" class="iframe"></iframe>
+</div>
+<div id="contactoIframeContainer" class="iframe-container">
+    <iframe id="contactoIframe" class="iframe"></iframe>
+</div>
